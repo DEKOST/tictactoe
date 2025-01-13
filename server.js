@@ -1,157 +1,85 @@
 const WebSocket = require('ws');
+
 const wss = new WebSocket.Server({ port: 8080 });
 
-let players = {};
-let platforms = [];
-
-// Генерация платформ
-function generatePlatforms() {
-    platforms = [];
-    for (let i = 0; i < 10; i++) {
-        platforms.push({
-            x: Math.random() * 800,
-            y: 600 - i * 100,
-            width: 80,
-            height: 10
-        });
-    }
-}
-
-// Добавление платформы под игрока
-function addPlatformForPlayer(player) {
-    platforms.push({
-        x: player.x - 40, // Центрируем платформу под игроком
-        y: player.y + player.height,
-        width: 80,
-        height: 10
-    });
-}
-
-// Обработка гравитации и падения
-function applyGravity(player) {
-    const gravity = 0.5;
-    player.velocityY += gravity; // Применяем гравитацию
-    player.y += player.velocityY; // Обновляем вертикальное положение игрока
-
-    // Ограничиваем падение до пола
-    if (player.y + player.height > 600) {
-        player.y = 600 - player.height;
-        player.velocityY = 0; // Останавливаем падение
-    }
-}
-
-// Проверка столкновений с платформами
-function checkCollisions(player) {
-    for (const platform of platforms) {
-        if (
-            player.x < platform.x + platform.width &&
-            player.x + player.width > platform.x &&
-            player.y + player.height <= platform.y &&
-            player.y + player.height + player.velocityY >= platform.y
-        ) {
-            player.y = platform.y - player.height;
-            player.velocityY = 0; // Останавливаем падение
-        }
-    }
-}
+let players = [];
+let gameState = ['', '', '', '', '', '', '', '', ''];
+let currentPlayer = 'X';
 
 wss.on('connection', (ws) => {
     console.log('Новое подключение');
 
-    // Назначаем игроку уникальный ID
-    const playerId = Math.random().toString(36).substring(7);
-    const player = {
-        x: 150, // Начальная позиция X
-        y: 150, // Начальная позиция Y
-        width: 40,
-        height: 40,
-        velocityY: 0,
-        color: Object.keys(players).length === 0 ? 'blue' : 'red'
-    };
-    players[playerId] = player;
+    if (players.length < 2) {
+        players.push(ws);
+        ws.send(JSON.stringify({ type: 'role', role: players.length === 1 ? 'X' : 'O' }));
 
-    // Добавляем платформу под игрока
-    addPlatformForPlayer(player);
-
-    // Отправляем начальное состояние игры
-    ws.send(JSON.stringify({
-        type: 'init',
-        playerId,
-        player,
-        players,
-        platforms
-    }));
-
-    // Оповещаем всех игроков о новом подключении
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-                type: 'state',
-                players,
-                platforms
-            }));
+        if (players.length === 2) {
+            broadcast({ type: 'start', gameState, currentPlayer });
         }
-    });
+    } else {
+        ws.send(JSON.stringify({ type: 'error', message: 'Игра уже началась' }));
+        ws.close();
+    }
 
-    // Обработка сообщений от клиента
     ws.on('message', (message) => {
         const data = JSON.parse(message);
 
-        if (data.type === 'update') {
-            // Обновляем состояние игрока
-            players[playerId] = data.player;
+        if (data.type === 'move') {
+            const { index } = data;
+            if (gameState[index] === '' && currentPlayer === data.player) {
+                gameState[index] = data.player;
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                broadcast({ type: 'update', gameState, currentPlayer });
 
-            // Отправляем обновленное состояние всем игрокам
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({
-                        type: 'state',
-                        players,
-                        platforms
-                    }));
+                const winner = checkWinner();
+                if (winner) {
+                    broadcast({ type: 'winner', winner });
+                    resetGame();
+                } else if (gameState.every(cell => cell !== '')) {
+                    broadcast({ type: 'draw' });
+                    resetGame();
                 }
-            });
+            }
         }
     });
 
-    // Удаляем игрока при отключении
     ws.on('close', () => {
-        delete players[playerId];
-        console.log('Игрок отключен');
-
-        // Оповещаем всех игроков об отключении
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                    type: 'state',
-                    players,
-                    platforms
-                }));
-            }
-        });
+        console.log('Подключение закрыто');
+        players = players.filter(player => player !== ws);
+        if (players.length < 2) {
+            resetGame();
+        }
     });
 });
 
-// Основной игровой цикл на сервере
-setInterval(() => {
-    // Применяем гравитацию и проверку столкновений для каждого игрока
-    for (const playerId in players) {
-        const player = players[playerId];
-        applyGravity(player);
-        checkCollisions(player);
-    }
-
-    // Отправляем обновленное состояние всем клиентам
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-                type: 'state',
-                players,
-                platforms
-            }));
+function broadcast(message) {
+    players.forEach(player => {
+        if (player.readyState === WebSocket.OPEN) {
+            player.send(JSON.stringify(message));
         }
     });
-}, 1000 / 60); // Обновляем состояние 60 раз в секунду (60 FPS)
+}
 
-generatePlatforms();
+function checkWinner() {
+    const winningConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // строки
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // столбцы
+        [0, 4, 8], [2, 4, 6]             // диагонали
+    ];
+
+    for (const condition of winningConditions) {
+        const [a, b, c] = condition;
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+            return gameState[a];
+        }
+    }
+    return null;
+}
+
+function resetGame() {
+    gameState = ['', '', '', '', '', '', '', '', ''];
+    currentPlayer = 'X';
+    broadcast({ type: 'reset', gameState, currentPlayer });
+}
+
 console.log('Сервер запущен на ws://localhost:8080');

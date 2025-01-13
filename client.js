@@ -10,16 +10,15 @@ let players = {};
 let platforms = [];
 
 let player = {
-    x: canvas.width / 2 - 20,
-    y: canvas.height - 100,
+    x: canvas.width / 2 - 20, // Начальная позиция X (центр экрана)
+    y: canvas.height - 300, // Начальная позиция Y (внизу экрана)
     width: 40,
     height: 40,
-    velocityY: 1, // Задайте небольшую начальную скорость, чтобы начать падение
+    velocityY: 0,
     gravity: 0.5,
     jumpStrength: -15,
-    color: 'blue'
+    color: 'blue' // Локальный цвет игрока
 };
-
 
 // Переменные для управления касаниями
 let touchStartX = 0;
@@ -74,21 +73,25 @@ ws.onmessage = (event) => {
 
 // Проверка столкновений с платформами
 function checkCollisions() {
+    let onPlatform = false;
     for (const platform of platforms) {
-        // Проверяем, что игрок на платформе
         if (
             player.x < platform.x + platform.width &&
             player.x + player.width > platform.x &&
-            player.y + player.height <= platform.y &&
-            player.y + player.height + player.velocityY >= platform.y
+            player.y + player.height >= platform.y &&
+            player.y + player.height <= platform.y + platform.height
         ) {
             player.y = platform.y - player.height;
-            player.velocityY = 0; // останавливаем падение, если игрок на платформе
+            player.velocityY = 0; // Останавливаем игрока на платформе
+            onPlatform = true;
         }
+    }
+    if (!onPlatform && player.velocityY === 0) {
+        player.velocityY = player.gravity; // Применяем гравитацию, если игрок не на платформе
     }
 }
 
-
+// Обновление позиции игрока
 function updatePlayer() {
     player.velocityY += player.gravity; // Применяем гравитацию
     player.y += player.velocityY;
@@ -97,20 +100,14 @@ function updatePlayer() {
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-    // Убедитесь, что игрок не уходит за нижнюю границу экрана
-    if (player.y > canvas.height - player.height) {
-        player.y = canvas.height - player.height;
-        player.velocityY = 0; // Останавливаем падение
-    }
-
+    // Отправка обновленного состояния на сервер
     if (playerId) { // Проверяем, что playerId определен
         ws.send(JSON.stringify({
             type: 'update',
-            player: { ...player, color: players[playerId]?.color || 'blue' }
+            player: { ...player, color: players[playerId]?.color || 'blue' } // Используем локальный цвет, если цвет игрока не определен
         }));
     }
 }
-
 
 // Отрисовка игроков и платформ
 function drawGame() {

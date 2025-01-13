@@ -11,7 +11,7 @@ let platforms = [];
 
 let player = {
     x: canvas.width / 2 - 20, // Начальная позиция X (центр экрана)
-    y: canvas.height - 100, // Начальная позиция Y (внизу экрана)
+    y: canvas.height - 300, // Начальная позиция Y (внизу экрана)
     width: 40,
     height: 40,
     velocityY: 0,

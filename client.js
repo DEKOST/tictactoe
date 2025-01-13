@@ -14,7 +14,7 @@ const player = {
     velocityY: 0,
     speed: 5,
     gravity: 0.5,
-    jumpStrength: -20
+    jumpStrength: -10
 };
 
 // Платформы

@@ -42,7 +42,7 @@ canvas.addEventListener('touchmove', (event) => {
     const deltaX = touchCurrentX - touchStartX;
 
     // Двигаем игрока в направлении движения пальца
-    player.x += deltaX * 0.3; // Увеличили скорость движения
+    player.x += deltaX * 1.8; // Увеличили скорость движения
 
     // Обновляем начальную позицию касания
     touchStartX = touchCurrentX;

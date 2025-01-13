@@ -6,7 +6,7 @@ canvas.height = window.innerHeight;
 // Игрок
 const player = {
     x: canvas.width / 2 - 20,
-    y: canvas.height - 50,
+    y: canvas.height - 100, // Начальная позиция выше, чтобы стоять на платформе
     width: 40,
     height: 40,
     color: 'blue',
@@ -25,7 +25,17 @@ const platformHeight = 10;
 // Создание начальных платформ
 function createPlatforms() {
     platforms = [];
-    for (let i = 0; i < 5; i++) {
+    // Добавляем платформу под игрока
+    platforms.push({
+        x: player.x + player.width / 2 - platformWidth / 2, // Центрируем платформу под игроком
+        y: player.y + player.height,
+        width: platformWidth,
+        height: platformHeight,
+        color: 'green'
+    });
+
+    // Добавляем остальные платформы
+    for (let i = 1; i < 5; i++) {
         platforms.push({
             x: Math.random() * (canvas.width - platformWidth),
             y: canvas.height - i * 100,
@@ -125,7 +135,7 @@ function updatePlatforms() {
 // Сброс игры
 function resetGame() {
     player.x = canvas.width / 2 - 20;
-    player.y = canvas.height - 50;
+    player.y = canvas.height - 100;
     player.velocityY = 0;
     createPlatforms();
 }

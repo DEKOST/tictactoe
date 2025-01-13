@@ -1,15 +1,16 @@
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({ port: 8080 });
 
-let players = [];
+let players = {};
 let platforms = [];
 
+// Генерация платформ
 function generatePlatforms() {
     platforms = [];
     for (let i = 0; i < 10; i++) {
         platforms.push({
-            x: Math.random() * 400,
-            y: i * 100,
+            x: Math.random() * 800,
+            y: 600 - i * 100,
             width: 80,
             height: 10
         });
@@ -19,44 +20,45 @@ function generatePlatforms() {
 wss.on('connection', (ws) => {
     console.log('Новое подключение');
 
-    if (players.length < 2) {
-        players.push(ws);
-        ws.send(JSON.stringify({ type: 'role', role: players.length === 1 ? 'player1' : 'player2' }));
+    // Назначаем игроку уникальный ID
+    const playerId = Math.random().toString(36).substring(7);
+    players[playerId] = { x: 400, y: 500, velocityY: 0, color: players.length === 0 ? 'blue' : 'red' };
 
-        if (players.length === 2) {
-            generatePlatforms();
-            broadcast({ type: 'start', platforms });
-        }
-    } else {
-        ws.send(JSON.stringify({ type: 'error', message: 'Игра уже началась' }));
-        ws.close();
-    }
+    // Отправляем начальное состояние игры
+    ws.send(JSON.stringify({
+        type: 'init',
+        playerId,
+        players,
+        platforms
+    }));
 
+    // Обработка сообщений от клиента
     ws.on('message', (message) => {
         const data = JSON.parse(message);
 
         if (data.type === 'update') {
-            const playerState = data.player;
-            broadcast({ type: 'state', platforms, otherPlayer: playerState });
+            // Обновляем состояние игрока
+            players[playerId] = data.player;
+
+            // Отправляем обновленное состояние всем игрокам
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'state',
+                        players,
+                        platforms
+                    }));
+                }
+            });
         }
     });
 
+    // Удаляем игрока при отключении
     ws.on('close', () => {
-        console.log('Подключение закрыто');
-        players = players.filter(player => player !== ws);
-        if (players.length < 2) {
-            players = [];
-            platforms = [];
-        }
+        delete players[playerId];
+        console.log('Игрок отключен');
     });
 });
 
-function broadcast(message) {
-    players.forEach(player => {
-        if (player.readyState === WebSocket.OPEN) {
-            player.send(JSON.stringify(message));
-        }
-    });
-}
-
+generatePlatforms();
 console.log('Сервер запущен на ws://localhost:8080');

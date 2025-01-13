@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight * 0.8; // 80% высоты экрана для canvas
 
-const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+const ws = new WebSocket('ws://localhost:8080');
 
 let playerId;
 let players = {};

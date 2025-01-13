@@ -27,6 +27,34 @@ function addPlatformForPlayer(player) {
     });
 }
 
+// Обработка гравитации и падения
+function applyGravity(player) {
+    const gravity = 0.5;
+    player.velocityY += gravity; // Применяем гравитацию
+    player.y += player.velocityY; // Обновляем вертикальное положение игрока
+
+    // Ограничиваем падение до пола
+    if (player.y + player.height > 600) {
+        player.y = 600 - player.height;
+        player.velocityY = 0; // Останавливаем падение
+    }
+}
+
+// Проверка столкновений с платформами
+function checkCollisions(player) {
+    for (const platform of platforms) {
+        if (
+            player.x < platform.x + platform.width &&
+            player.x + player.width > platform.x &&
+            player.y + player.height <= platform.y &&
+            player.y + player.height + player.velocityY >= platform.y
+        ) {
+            player.y = platform.y - player.height;
+            player.velocityY = 0; // Останавливаем падение
+        }
+    }
+}
+
 wss.on('connection', (ws) => {
     console.log('Новое подключение');
 
@@ -49,7 +77,7 @@ wss.on('connection', (ws) => {
     ws.send(JSON.stringify({
         type: 'init',
         playerId,
-        player, // Отправляем начальное состояние игрока
+        player,
         players,
         platforms
     }));
@@ -103,6 +131,27 @@ wss.on('connection', (ws) => {
         });
     });
 });
+
+// Основной игровой цикл на сервере
+setInterval(() => {
+    // Применяем гравитацию и проверку столкновений для каждого игрока
+    for (const playerId in players) {
+        const player = players[playerId];
+        applyGravity(player);
+        checkCollisions(player);
+    }
+
+    // Отправляем обновленное состояние всем клиентам
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'state',
+                players,
+                platforms
+            }));
+        }
+    });
+}, 1000 / 60); // Обновляем состояние 60 раз в секунду (60 FPS)
 
 generatePlatforms();
 console.log('Сервер запущен на ws://localhost:8080');

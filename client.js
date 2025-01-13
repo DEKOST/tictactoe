@@ -10,7 +10,7 @@ let players = {};
 let platforms = [];
 
 let player = {
-    x: 400, // Начальная позиция X (синхронизирована с сервером)
+    x: canvas.width / 2 - 20, // Начальная позиция X (центр экрана)
     y: canvas.height - 100, // Начальная позиция Y (внизу экрана)
     width: 40,
     height: 40,
@@ -20,17 +20,37 @@ let player = {
     color: 'blue' // Локальный цвет игрока
 };
 
-// Инициализация Hammer.js
-const hammer = new Hammer(canvas);
-hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+// Переменные для управления касаниями
+let touchStartX = 0;
+let isDragging = false;
 
-// Обработка свайпов
-hammer.on('swipeleft', () => {
-    player.x -= 20; // Двигаем игрока влево
+// Обработка начала касания
+canvas.addEventListener('touchstart', (event) => {
+    const touch = event.touches[0];
+    touchStartX = touch.clientX; // Запоминаем начальную позицию касания
+    isDragging = true;
 });
 
-hammer.on('swiperight', () => {
-    player.x += 20; // Двигаем игрока вправо
+// Обработка движения пальца
+canvas.addEventListener('touchmove', (event) => {
+    if (!isDragging) return;
+
+    const touch = event.touches[0];
+    const touchCurrentX = touch.clientX;
+
+    // Вычисляем разницу между текущей и начальной позицией касания
+    const deltaX = touchCurrentX - touchStartX;
+
+    // Двигаем игрока в направлении движения пальца
+    player.x += deltaX * 2; // Увеличили скорость движения
+
+    // Обновляем начальную позицию касания
+    touchStartX = touchCurrentX;
+});
+
+// Обработка окончания касания
+canvas.addEventListener('touchend', () => {
+    isDragging = false;
 });
 
 // Обработка сообщений от сервера

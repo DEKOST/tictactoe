@@ -34,7 +34,7 @@ wss.on('connection', (ws) => {
     const playerId = Math.random().toString(36).substring(7);
     const player = {
         x: 400, // Начальная позиция X
-        y: 500, // Начальная позиция Y
+        y: canvas.height - 100, // Начальная позиция Y (внизу экрана)
         width: 40,
         height: 40,
         velocityY: 0,

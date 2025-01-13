@@ -1,9 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.height = window.innerHeight * 0.8; // 80% высоты экрана для canvas
 
-const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+const ws = new WebSocket('ws://localhost:8080');
 
 let playerId;
 let players = {};
@@ -19,6 +19,14 @@ let player = {
     jumpStrength: -15,
     color: 'blue' // Локальный цвет игрока
 };
+
+// Кнопки управления
+const leftButton = document.getElementById('leftButton');
+const rightButton = document.getElementById('rightButton');
+
+// Обработка нажатий кнопок
+leftButton.addEventListener('touchstart', () => player.x -= 10);
+rightButton.addEventListener('touchstart', () => player.x += 10);
 
 // Обработка сообщений от сервера
 ws.onmessage = (event) => {
@@ -37,15 +45,6 @@ ws.onmessage = (event) => {
             break;
     }
 };
-
-// Обработка нажатий клавиш
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowLeft') {
-        player.x -= 10;
-    } else if (event.key === 'ArrowRight') {
-        player.x += 10;
-    }
-});
 
 // Проверка столкновений с платформами
 function checkCollisions() {

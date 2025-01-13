@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+const ws = new WebSocket('ws://localhost:8080');
 
 let playerId;
 let players = {};
@@ -64,7 +64,7 @@ function checkCollisions() {
 
 // Обновление позиции игрока
 function updatePlayer() {
-    player.velocityY += player.gravity;
+    player.velocityY += player.gravity; // Применяем гравитацию
     player.y += player.velocityY;
 
     // Ограничение движения игрока в пределах canvas

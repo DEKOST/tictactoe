@@ -16,6 +16,7 @@ let player = {
     height: 40,
     velocityY: 0,
     gravity: 0.5,
+    speed: 5,
     jumpStrength: -15,
     color: 'blue' // Локальный цвет игрока
 };

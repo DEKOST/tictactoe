@@ -10,15 +10,16 @@ let players = {};
 let platforms = [];
 
 let player = {
-    x: canvas.width / 2 - 20, // Начальная позиция X (центр экрана)
-    y: canvas.height - 300, // Начальная позиция Y (внизу экрана)
+    x: canvas.width / 2 - 20,
+    y: canvas.height - 300,
     width: 40,
     height: 40,
-    velocityY: 0,
+    velocityY: 1, // Задайте небольшую начальную скорость, чтобы начать падение
     gravity: 0.5,
     jumpStrength: -15,
-    color: 'blue' // Локальный цвет игрока
+    color: 'blue'
 };
+
 
 // Переменные для управления касаниями
 let touchStartX = 0;
@@ -74,19 +75,20 @@ ws.onmessage = (event) => {
 // Проверка столкновений с платформами
 function checkCollisions() {
     for (const platform of platforms) {
+        // Проверяем, что игрок на платформе
         if (
             player.x < platform.x + platform.width &&
             player.x + player.width > platform.x &&
-            player.y + player.height >= platform.y &&
-            player.y + player.height <= platform.y + platform.height
+            player.y + player.height <= platform.y &&
+            player.y + player.height + player.velocityY >= platform.y
         ) {
             player.y = platform.y - player.height;
-            player.velocityY = player.jumpStrength;
+            player.velocityY = 0; // останавливаем падение, если игрок на платформе
         }
     }
 }
 
-// Обновление позиции игрока
+
 function updatePlayer() {
     player.velocityY += player.gravity; // Применяем гравитацию
     player.y += player.velocityY;
@@ -95,14 +97,20 @@ function updatePlayer() {
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-    // Отправка обновленного состояния на сервер
+    // Убедитесь, что игрок не уходит за нижнюю границу экрана
+    if (player.y > canvas.height - player.height) {
+        player.y = canvas.height - player.height;
+        player.velocityY = 0; // Останавливаем падение
+    }
+
     if (playerId) { // Проверяем, что playerId определен
         ws.send(JSON.stringify({
             type: 'update',
-            player: { ...player, color: players[playerId]?.color || 'blue' } // Используем локальный цвет, если цвет игрока не определен
+            player: { ...player, color: players[playerId]?.color || 'blue' }
         }));
     }
 }
+
 
 // Отрисовка игроков и платформ
 function drawGame() {

@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const ws = new WebSocket('wss://your-server-url.com');
+const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
 let player = {
     x: canvas.width / 2,

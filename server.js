@@ -10,7 +10,7 @@ function generatePlatforms() {
     for (let i = 0; i < 10; i++) {
         platforms.push({
             x: Math.random() * 800,
-            y: 600 - i * 100, // Платформы начинаются с высоты 600 и идут вверх
+            y: 600 - i * 100,
             width: 80,
             height: 10
         });

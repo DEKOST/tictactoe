@@ -10,7 +10,7 @@ function generatePlatforms() {
     for (let i = 0; i < 10; i++) {
         platforms.push({
             x: Math.random() * 800,
-            y: 600 - i * 100,
+            y: canvas.height - i * 100 - 200, // Опустили платформы ниже
             width: 80,
             height: 10
         });

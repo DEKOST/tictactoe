@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+const ws = new WebSocket('ws://localhost:8080');
 
 let playerId;
 let players = {};
@@ -17,7 +17,7 @@ const player = {
     velocityY: 0,
     gravity: 0.5,
     jumpStrength: -15,
-    color: 'blue'
+    color: 'blue' // Локальный цвет игрока
 };
 
 // Обработка сообщений от сервера
@@ -71,10 +71,12 @@ function updatePlayer() {
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
     // Отправка обновленного состояния на сервер
-    ws.send(JSON.stringify({
-        type: 'update',
-        player: { ...player, color: players[playerId].color }
-    }));
+    if (playerId) { // Проверяем, что playerId определен
+        ws.send(JSON.stringify({
+            type: 'update',
+            player: { ...player, color: players[playerId]?.color || 'blue' } // Используем локальный цвет, если цвет игрока не определен
+        }));
+    }
 }
 
 // Отрисовка игроков и платформ
@@ -89,7 +91,7 @@ function drawGame() {
 
     // Отрисовка игроков
     Object.values(players).forEach(p => {
-        ctx.fillStyle = p.color;
+        ctx.fillStyle = p.color || 'blue'; // Используем цвет по умолчанию, если цвет не определен
         ctx.fillRect(p.x, p.y, player.width, player.height);
     });
 }

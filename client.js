@@ -11,7 +11,7 @@ let platforms = [];
 
 let player = {
     x: 400, // Начальная позиция X (синхронизирована с сервером)
-    y: 500, // Начальная позиция Y (синхронизирована с сервером)
+    y: canvas.height - 100, // Начальная позиция Y (внизу экрана)
     width: 40,
     height: 40,
     velocityY: 0,
@@ -20,13 +20,18 @@ let player = {
     color: 'blue' // Локальный цвет игрока
 };
 
-// Кнопки управления
-const leftButton = document.getElementById('leftButton');
-const rightButton = document.getElementById('rightButton');
+// Инициализация Hammer.js
+const hammer = new Hammer(canvas);
+hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
 
-// Обработка нажатий кнопок
-leftButton.addEventListener('touchstart', () => player.x -= 10);
-rightButton.addEventListener('touchstart', () => player.x += 10);
+// Обработка свайпов
+hammer.on('swipeleft', () => {
+    player.x -= 20; // Двигаем игрока влево
+});
+
+hammer.on('swiperight', () => {
+    player.x += 20; // Двигаем игрока вправо
+});
 
 // Обработка сообщений от сервера
 ws.onmessage = (event) => {

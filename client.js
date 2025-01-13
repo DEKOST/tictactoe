@@ -11,7 +11,7 @@ let platforms = [];
 
 let player = {
     x: 400, // Начальная позиция X (синхронизирована с сервером)
-    y: 500, // Начальная позиция Y (синхронизирована с сервером)
+    y: canvas.height - 150, // Опустили игрока ниже
     width: 40,
     height: 40,
     velocityY: 0,
@@ -42,7 +42,7 @@ canvas.addEventListener('touchmove', (event) => {
     const deltaX = touchCurrentX - touchStartX;
 
     // Двигаем игрока в направлении движения пальца
-    player.x += deltaX * 0.1; // Масштабируем движение для плавности
+    player.x += deltaX * 0.3; // Увеличили скорость движения
 
     // Обновляем начальную позицию касания
     touchStartX = touchCurrentX;

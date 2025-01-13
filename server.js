@@ -17,12 +17,33 @@ function generatePlatforms() {
     }
 }
 
+// Добавление платформы под игрока
+function addPlatformForPlayer(player) {
+    platforms.push({
+        x: player.x - 40, // Центрируем платформу под игроком
+        y: player.y + player.height,
+        width: 80,
+        height: 10
+    });
+}
+
 wss.on('connection', (ws) => {
     console.log('Новое подключение');
 
     // Назначаем игроку уникальный ID
     const playerId = Math.random().toString(36).substring(7);
-    players[playerId] = { x: 400, y: 500, velocityY: 0, color: players.length === 0 ? 'blue' : 'red' };
+    const player = {
+        x: 400,
+        y: 500,
+        width: 40,
+        height: 40,
+        velocityY: 0,
+        color: Object.keys(players).length === 0 ? 'blue' : 'red'
+    };
+    players[playerId] = player;
+
+    // Добавляем платформу под игрока
+    addPlatformForPlayer(player);
 
     // Отправляем начальное состояние игры
     ws.send(JSON.stringify({

@@ -11,15 +11,30 @@ const player = {
     height: 40,
     color: 'blue',
     velocityX: 0,
-    speed: 5
+    velocityY: 0,
+    speed: 5,
+    gravity: 0.5,
+    jumpStrength: -10
 };
 
 // Платформы
-const platforms = [
-    { x: 100, y: 400, width: 80, height: 10, color: 'green' },
-    { x: 300, y: 300, width: 80, height: 10, color: 'green' },
-    { x: 200, y: 200, width: 80, height: 10, color: 'green' }
-];
+let platforms = [];
+const platformWidth = 80;
+const platformHeight = 10;
+
+// Создание начальных платформ
+function createPlatforms() {
+    platforms = [];
+    for (let i = 0; i < 5; i++) {
+        platforms.push({
+            x: Math.random() * (canvas.width - platformWidth),
+            y: canvas.height - i * 100,
+            width: platformWidth,
+            height: platformHeight,
+            color: 'green'
+        });
+    }
+}
 
 // Отрисовка игрока
 function drawPlayer() {
@@ -50,13 +65,69 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
+// Проверка столкновений с платформами
+function checkCollisions() {
+    for (const platform of platforms) {
+        if (
+            player.x < platform.x + platform.width &&
+            player.x + player.width > platform.x &&
+            player.y + player.height >= platform.y &&
+            player.y + player.height <= platform.y + platform.height &&
+            player.velocityY >= 0
+        ) {
+            player.velocityY = player.jumpStrength; // Прыжок
+        }
+    }
+}
+
 // Обновление позиции игрока
 function updatePlayer() {
+    player.velocityY += player.gravity; // Гравитация
+    player.y += player.velocityY;
     player.x += player.velocityX;
 
     // Ограничение движения игрока в пределах canvas
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+    // Если игрок падает вниз, завершаем игру
+    if (player.y > canvas.height) {
+        alert('Игра окончена!');
+        resetGame();
+    }
+}
+
+// Обновление позиции платформ
+function updatePlatforms() {
+    // Двигаем платформы вниз, если игрок поднимается
+    if (player.y < canvas.height / 2 && player.velocityY < 0) {
+        const deltaY = player.velocityY;
+        platforms.forEach(platform => {
+            platform.y -= deltaY;
+        });
+    }
+
+    // Удаляем платформы, которые ушли за пределы экрана
+    platforms = platforms.filter(platform => platform.y < canvas.height);
+
+    // Добавляем новые платформы сверху
+    while (platforms.length < 5) {
+        platforms.push({
+            x: Math.random() * (canvas.width - platformWidth),
+            y: -platformHeight,
+            width: platformWidth,
+            height: platformHeight,
+            color: 'green'
+        });
+    }
+}
+
+// Сброс игры
+function resetGame() {
+    player.x = canvas.width / 2 - 20;
+    player.y = canvas.height - 50;
+    player.velocityY = 0;
+    createPlatforms();
 }
 
 // Основной игровой цикл
@@ -64,10 +135,13 @@ function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очистка экрана
 
     updatePlayer(); // Обновление позиции игрока
+    updatePlatforms(); // Обновление позиции платформ
+    checkCollisions(); // Проверка столкновений
     drawPlatforms(); // Отрисовка платформ
-    drawPlayer();    // Отрисовка игрока
+    drawPlayer(); // Отрисовка игрока
 
     requestAnimationFrame(gameLoop); // Запуск следующего кадра
 }
 
+createPlatforms(); // Создание начальных платформ
 gameLoop(); // Запуск игры

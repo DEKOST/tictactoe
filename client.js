@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
-canvas.height = window.innerHeight * 0.8; // 80% высоты экрана для canvas
+canvas.height = window.innerHeight;
 
 const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
@@ -11,12 +11,11 @@ let platforms = [];
 
 let player = {
     x: canvas.width / 2 - 20, // Начальная позиция X (центр экрана)
-    y: canvas.height - 300, // Начальная позиция Y (внизу экрана)
+    y: canvas.height - 100, // Начальная позиция Y (внизу экрана)
     width: 40,
     height: 40,
     velocityY: 0,
     gravity: 0.5,
-    speed: 5,
     jumpStrength: -15,
     color: 'blue' // Локальный цвет игрока
 };
@@ -43,7 +42,7 @@ canvas.addEventListener('touchmove', (event) => {
     const deltaX = touchCurrentX - touchStartX;
 
     // Двигаем игрока в направлении движения пальца
-    player.x += deltaX * 2; // Увеличили скорость движения
+    player.x += deltaX * 0.3; // Увеличили скорость движения
 
     // Обновляем начальную позицию касания
     touchStartX = touchCurrentX;
@@ -74,7 +73,6 @@ ws.onmessage = (event) => {
 
 // Проверка столкновений с платформами
 function checkCollisions() {
-    let onPlatform = false;
     for (const platform of platforms) {
         if (
             player.x < platform.x + platform.width &&
@@ -83,12 +81,8 @@ function checkCollisions() {
             player.y + player.height <= platform.y + platform.height
         ) {
             player.y = platform.y - player.height;
-            player.velocityY = 0; // Останавливаем игрока на платформе
-            onPlatform = true;
+            player.velocityY = player.jumpStrength;
         }
-    }
-    if (!onPlatform && player.velocityY === 0) {
-        player.velocityY = player.gravity; // Применяем гравитацию, если игрок не на платформе
     }
 }
 

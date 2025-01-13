@@ -53,6 +53,17 @@ wss.on('connection', (ws) => {
         platforms
     }));
 
+    // Оповещаем всех игроков о новом подключении
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                type: 'state',
+                players,
+                platforms
+            }));
+        }
+    });
+
     // Обработка сообщений от клиента
     ws.on('message', (message) => {
         const data = JSON.parse(message);
@@ -78,6 +89,17 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         delete players[playerId];
         console.log('Игрок отключен');
+
+        // Оповещаем всех игроков об отключении
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'state',
+                    players,
+                    platforms
+                }));
+            }
+        });
     });
 });
 

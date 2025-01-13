@@ -11,7 +11,7 @@ let platforms = [];
 
 let player = {
     x: canvas.width / 2 - 20,
-    y: canvas.height - 300,
+    y: canvas.height - 100,
     width: 40,
     height: 40,
     velocityY: 1, // Задайте небольшую начальную скорость, чтобы начать падение

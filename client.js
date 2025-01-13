@@ -16,7 +16,7 @@ const player = {
     height: 40,
     velocityY: 0,
     gravity: 0.5,
-    jumpStrength: -15,
+    jumpStrength: -10,
     color: 'blue' // Локальный цвет игрока
 };
 

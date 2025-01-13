@@ -33,8 +33,8 @@ wss.on('connection', (ws) => {
     // Назначаем игроку уникальный ID
     const playerId = Math.random().toString(36).substring(7);
     const player = {
-        x: 400,
-        y: 500,
+        x: 400, // Начальная позиция X
+        y: 500, // Начальная позиция Y
         width: 40,
         height: 40,
         velocityY: 0,
@@ -49,6 +49,7 @@ wss.on('connection', (ws) => {
     ws.send(JSON.stringify({
         type: 'init',
         playerId,
+        player, // Отправляем начальное состояние игрока
         players,
         platforms
     }));

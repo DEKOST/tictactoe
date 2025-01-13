@@ -9,9 +9,9 @@ let playerId;
 let players = {};
 let platforms = [];
 
-const player = {
-    x: canvas.width / 2 - 20,
-    y: canvas.height - 100,
+let player = {
+    x: 400, // Начальная позиция X (синхронизирована с сервером)
+    y: 500, // Начальная позиция Y (синхронизирована с сервером)
     width: 40,
     height: 40,
     velocityY: 0,
@@ -27,6 +27,7 @@ ws.onmessage = (event) => {
     switch (data.type) {
         case 'init':
             playerId = data.playerId;
+            player = data.player; // Используем начальное состояние игрока с сервера
             players = data.players;
             platforms = data.platforms;
             break;

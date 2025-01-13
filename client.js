@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const ws = new WebSocket('wss://tictactoe-online-bleat.netlify.app/');
+const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
 let playerId;
 let players = {};

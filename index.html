@@ -58,7 +58,7 @@
         let playerRole = '';
         let currentPlayer = 'X';
 
-        const ws = new WebSocket('wws://tictactoe-w7mm.onrender.com');
+        const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-нолики (Онлайн)</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+    <div class="status" id="status">Ожидание второго игрока...</div>
+
+    <script>
+        const board = document.getElementById('board');
+        const status = document.getElementById('status');
+        let playerRole = '';
+        let currentPlayer = 'X';
+
+        const ws = new WebSocket('ws://localhost:8080');
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+                case 'role':
+                    playerRole = data.role;
+                    status.textContent = `Вы играете за ${playerRole}`;
+                    break;
+                case 'start':
+                    currentPlayer = data.currentPlayer;
+                    updateBoard(data.gameState);
+                    break;
+                case 'update':
+                    currentPlayer = data.currentPlayer;
+                    updateBoard(data.gameState);
+                    break;
+                case 'winner':
+                    status.textContent = `Игрок ${data.winner} выиграл!`;
+                    break;
+                case 'draw':
+                    status.textContent = 'Ничья!';
+                    break;
+                case 'reset':
+                    updateBoard(data.gameState);
+                    status.textContent = 'Игра сброшена. Начинаем заново!';
+                    break;
+            }
+        };
+
+        board.addEventListener('click', (event) => {
+            const cell = event.target;
+            const index = cell.getAttribute('data-index');
+
+            if (playerRole === currentPlayer && !cell.textContent) {
+                ws.send(JSON.stringify({ type: 'move', index, player: playerRole }));
+            }
+        });
+
+        function updateBoard(gameState) {
+            gameState.forEach((value, index) => {
+                board.children[index].textContent = value;
+            });
+        }
+    </script>
+</body>
+</html>

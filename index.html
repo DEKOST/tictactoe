@@ -12,19 +12,35 @@
         <button id="loginBtn">Войти</button>
     </div>
     <div id="game" style="display: none;">
-        <div class="board" id="board">
-            <div class="cell" data-index="0"></div>
-            <div class="cell" data-index="1"></div>
-            <div class="cell" data-index="2"></div>
-            <div class="cell" data-index="3"></div>
-            <div class="cell" data-index="4"></div>
-            <div class="cell" data-index="5"></div>
-            <div class="cell" data-index="6"></div>
-            <div class="cell" data-index="7"></div>
-            <div class="cell" data-index="8"></div>
+        <div class="game-container">
+            <div id="board" class="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+            
+            <div id="gameControls" style="display: none;">
+                <button id="leaveGameBtn" class="leave-game-btn">Покинуть игру</button>
+            </div>
+
+            <div class="game-info-compact">
+                <div id="currentDuels" class="info-box">
+                    <h3>Текущие дуэли</h3>
+                    <div id="duelsList" class="scrollable-list"></div>
+                </div>
+                
+                <div id="gameHistory" class="info-box">
+                    <h3>История игр</h3>
+                    <div id="historyList" class="scrollable-list"></div>
+                </div>
+            </div>
         </div>
-        <div class="status" id="status">Ожидание второго игрока...</div>
-        <div class="online-players" id="onlinePlayers"></div>
     </div>
     <div id="challengePopup" class="popup" style="display: none;">
         <div class="popup-content">
@@ -34,17 +50,6 @@
         </div>
     </div>
     <div id="notifications" class="notifications"></div>
-    <div class="game-info">
-        <div id="currentDuels" class="current-duels">
-            <h3>Текущие дуэли</h3>
-            <div id="duelsList"></div>
-        </div>
-        
-        <div id="gameHistory" class="game-history">
-            <h3>История игр</h3>
-            <div id="historyList"></div>
-        </div>
-    </div>
 
 
     <script>
@@ -155,9 +160,9 @@
                             .map(duel => `
                                 <div class="duel-item">
                                     <span class="duel-players">${duel.players[0]} vs ${duel.players[1]}</span>
-                                    <span class="duel-time">Начало: ${new Date(duel.startTime).toLocaleTimeString()}</span>
+                                    <span class="duel-time">${new Date(duel.startTime).toLocaleTimeString()}</span>
                                 </div>
-                            `).join('') : '<p>Нет активных дуэлей</p>';
+                            `).join('') : '<p class="no-data">Нет активных дуэлей</p>';
                         break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
@@ -204,21 +209,16 @@
                         historyList.innerHTML = data.history.length ? data.history
                             .map(game => `
                                 <div class="history-item">
-                                    <div class="history-header">
-                                        <span class="history-time">${new Date(game.date).toLocaleString()}</span>
-                                    </div>
-                                    <div class="history-players">
-                                        ${game.players[0]} vs ${game.players[1]}
-                                    </div>
-                                    <div class="history-result">
+                                    <span class="history-players">${game.players[0]} vs ${game.players[1]}</span>
+                                    <span class="history-result">
                                         ${game.abandoned 
-                                            ? `<span class="abandoned">Игрок ${game.abandonedBy} покинул игру</span>`
+                                            ? `Игрок ${game.abandonedBy} вышел`
                                             : game.winner 
-                                                ? `Победитель: ${game.winner}` 
+                                                ? `Победа: ${game.winner}` 
                                                 : 'Ничья'}
-                                    </div>
+                                    </span>
                                 </div>
-                            `).join('') : '<p>Нет записей</p>';
+                            `).join('') : '<p class="no-data">Нет записей</p>';
                         break;
                     case 'challengeSent':
                         showNotification(`Вызов на дуэль отправлен игроку ${data.challenged}. Ожидаем ответ...`);

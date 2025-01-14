@@ -1,159 +1,174 @@
 const WebSocket = require('ws');
+const { v4: uuidv4 } = require('uuid');
 
 const wss = new WebSocket.Server({ port: 8080 });
 
-let players = {}; // Хранит подключенных игроков
-let games = {};
-let gameIdCounter = 1;
+const players = new Map(); // Карта для хранения игроков
+const games = new Map(); // Карта для хранения активных игр
 
 wss.on('connection', (ws) => {
-    console.log('Новое подключение');
+    console.log('Новое соединение установлено');
 
     ws.on('message', (message) => {
-        const data = JSON.parse(message);
+        try {
+            const data = JSON.parse(message);
 
-        switch (data.type) {
-            case 'login':
-                if (Object.values(players).includes(data.username)) {
-                    ws.send(JSON.stringify({ type: 'login', success: false, message: 'Юзернейм уже занят' }));
-                } else {
-                    players[ws] = data.username; // Сохраняем юзернейм
-                    ws.send(JSON.stringify({ type: 'login', success: true }));
-
-                    // Отправляем новому клиенту текущий список игроков
-                    ws.send(JSON.stringify({
-                        type: 'onlinePlayers',
-                        players: Object.values(players)
-                    }));
-
-                    // Уведомляем всех о новом игроке
-                    broadcastOnlinePlayers();
-                }
-                break;
-            case 'challenge':
-                const challenged = Object.keys(players).find(key => players[key] === data.challenged);
-                if (challenged && challenged.readyState === WebSocket.OPEN) {
-                    challenged.send(JSON.stringify({
-                        type: 'challenge',
-                        challenger: data.challenger
-                    }));
-                }
-                break;
-            case 'acceptChallenge':
-                const challenger = Object.keys(players).find(key => players[key] === data.challenger);
-                if (challenger && challenger.readyState === WebSocket.OPEN) {
-                    const gameId = gameIdCounter++;
-                    games[gameId] = {
-                        players: [challenger, ws],
-                        gameState: ['', '', '', '', '', '', '', '', ''],
-                        currentPlayer: 'X'
-                    };
-                    challenger.send(JSON.stringify({
-                        type: 'start',
-                        gameId,
-                        gameState: games[gameId].gameState,
-                        currentPlayer: 'X'
-                    }));
-                    ws.send(JSON.stringify({
-                        type: 'start',
-                        gameId,
-                        gameState: games[gameId].gameState,
-                        currentPlayer: 'O'
-                    }));
-                }
-                break;
-            case 'move':
-                const game = games[data.gameId];
-                if (game && game.players.includes(ws) && game.gameState[data.index] === '' && game.currentPlayer === data.player) {
-                    game.gameState[data.index] = data.player;
-                    game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
-                    game.players.forEach(player => {
-                        if (player.readyState === WebSocket.OPEN) {
-                            player.send(JSON.stringify({
-                                type: 'update',
-                                gameState: game.gameState,
-                                currentPlayer: game.currentPlayer
-                            }));
-                        }
-                    });
-
-                    const winner = checkWinner(game.gameState);
-                    if (winner) {
-                        game.players.forEach(player => {
-                            if (player.readyState === WebSocket.OPEN) {
-                                player.send(JSON.stringify({ type: 'winner', winner }));
-                            }
-                        });
-                        resetGame(gameId);
-                    } else if (game.gameState.every(cell => cell !== '')) {
-                        game.players.forEach(player => {
-                            if (player.readyState === WebSocket.OPEN) {
-                                player.send(JSON.stringify({ type: 'draw' }));
-                            }
-                        });
-                        resetGame(gameId);
-                    }
-                }
-                break;
+            switch (data.type) {
+                case 'login':
+                    handleLogin(ws, data.username);
+                    break;
+                case 'challenge':
+                    handleChallenge(ws, data);
+                    break;
+                case 'acceptChallenge':
+                    handleAcceptChallenge(ws, data);
+                    break;
+                case 'move':
+                    handleMove(ws, data);
+                    break;
+                default:
+                    console.warn('Неизвестный тип сообщения:', data.type);
+            }
+        } catch (error) {
+            console.error('Ошибка обработки сообщения:', error);
         }
     });
 
     ws.on('close', () => {
-        console.log('Подключение закрыто');
-        delete players[ws]; // Удаляем игрока из списка
-        broadcastOnlinePlayers(); // Уведомляем всех об отключении
-    });
-
-    ws.on('error', (error) => {
-        console.error('Ошибка WebSocket:', error);
-        ws.close();
+        handleDisconnect(ws);
     });
 });
 
-// Функция для отправки списка онлайн-игроков всем клиентам
+function handleLogin(ws, username) {
+    if (!username || players.has(username)) {
+        ws.send(JSON.stringify({ type: 'login', success: false, message: 'Юзернейм уже занят или некорректен' }));
+        return;
+    }
+
+    players.set(username, { ws, username });
+    ws.username = username;
+
+    broadcastOnlinePlayers();
+
+    ws.send(JSON.stringify({ type: 'login', success: true }));
+}
+
+function handleChallenge(ws, { challenger, challenged }) {
+    const challengedPlayer = players.get(challenged);
+    if (!challengedPlayer) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Игрок не в сети' }));
+        return;
+    }
+
+    challengedPlayer.ws.send(JSON.stringify({ type: 'challenge', challenger }));
+}
+
+function handleAcceptChallenge(ws, { challenger }) {
+    const challengerPlayer = players.get(challenger);
+    if (!challengerPlayer) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Игрок уже вышел' }));
+        return;
+    }
+
+    const gameId = uuidv4();
+    const gameState = Array(9).fill(null);
+
+    games.set(gameId, {
+        players: [challenger, ws.username],
+        currentPlayer: challenger,
+        gameState,
+    });
+
+    challengerPlayer.ws.send(JSON.stringify({
+        type: 'start',
+        gameId,
+        currentPlayer: challenger,
+        gameState,
+    }));
+
+    ws.send(JSON.stringify({
+        type: 'start',
+        gameId,
+        currentPlayer: challenger,
+        gameState,
+    }));
+}
+
+function handleMove(ws, { gameId, index, player }) {
+    const game = games.get(gameId);
+
+    if (!game) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Игра не найдена' }));
+        return;
+    }
+
+    if (game.currentPlayer !== player || game.gameState[index] !== null) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Некорректный ход' }));
+        return;
+    }
+
+    game.gameState[index] = player;
+    game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
+
+    const winner = checkWinner(game.gameState);
+    if (winner) {
+        game.players.forEach((username) => {
+            players.get(username).ws.send(JSON.stringify({ type: 'winner', winner }));
+        });
+        games.delete(gameId);
+        return;
+    }
+
+    if (game.gameState.every((cell) => cell !== null)) {
+        game.players.forEach((username) => {
+            players.get(username).ws.send(JSON.stringify({ type: 'draw' }));
+        });
+        games.delete(gameId);
+        return;
+    }
+
+    game.players.forEach((username) => {
+        players.get(username).ws.send(JSON.stringify({
+            type: 'update',
+            currentPlayer: game.currentPlayer,
+            gameState: game.gameState,
+        }));
+    });
+}
+
+function handleDisconnect(ws) {
+    if (ws.username) {
+        players.delete(ws.username);
+        broadcastOnlinePlayers();
+    }
+}
+
 function broadcastOnlinePlayers() {
-    const onlinePlayers = Object.values(players); // Получаем список юзернеймов
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-                type: 'onlinePlayers',
-                players: onlinePlayers
-            }));
-        }
+    const playerList = Array.from(players.keys());
+    players.forEach(({ ws }) => {
+        ws.send(JSON.stringify({ type: 'onlinePlayers', players: playerList }));
     });
 }
 
 function checkWinner(gameState) {
-    const winningConditions = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // строки
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // столбцы
-        [0, 4, 8], [2, 4, 6]             // диагонали
+    const winningCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
     ];
 
-    for (const condition of winningConditions) {
-        const [a, b, c] = condition;
+    for (const [a, b, c] of winningCombinations) {
         if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
             return gameState[a];
         }
     }
+
     return null;
 }
 
-function resetGame(gameId) {
-    const game = games[gameId];
-    if (game) {
-        game.gameState = ['', '', '', '', '', '', '', '', ''];
-        game.currentPlayer = 'X';
-        game.players.forEach(player => {
-            if (player.readyState === WebSocket.OPEN) {
-                player.send(JSON.stringify({
-                    type: 'reset',
-                    gameState: game.gameState,
-                    currentPlayer: game.currentPlayer
-                }));
-            }
-        });
-    }
-}
-
-console.log('Сервер запущен на ws://localhost:8080');
+console.log('Сервер WebSocket запущен на ws://localhost:8080');

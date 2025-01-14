@@ -19,7 +19,15 @@ wss.on('connection', (ws) => {
                 } else {
                     players[ws] = data.username; // Сохраняем юзернейм
                     ws.send(JSON.stringify({ type: 'login', success: true }));
-                    broadcastOnlinePlayers(); // Отправляем обновленный список игроков
+
+                    // Отправляем новому клиенту текущий список игроков
+                    ws.send(JSON.stringify({ 
+                        type: 'onlinePlayers', 
+                        players: Object.values(players) 
+                    }));
+
+                    // Уведомляем всех о новом игроке
+                    broadcastOnlinePlayers();
                 }
                 break;
             case 'challenge':
@@ -87,7 +95,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         console.log('Подключение закрыто');
         delete players[ws]; // Удаляем игрока из списка
-        broadcastOnlinePlayers(); // Отправляем обновленный список игроков
+        broadcastOnlinePlayers(); // Уведомляем всех об отключении
     });
 });
 

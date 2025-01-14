@@ -121,23 +121,7 @@ function handleMove(ws, { gameId, index, player }) {
     game.gameState[index] = player;
     game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
 
-    const winner = checkWinner(game.gameState);
-    if (winner) {
-        game.players.forEach((username) => {
-            players.get(username).ws.send(JSON.stringify({ type: 'winner', winner }));
-        });
-        games.delete(gameId);
-        return;
-    }
-
-    if (game.gameState.every((cell) => cell !== null)) {
-        game.players.forEach((username) => {
-            players.get(username).ws.send(JSON.stringify({ type: 'draw' }));
-        });
-        games.delete(gameId);
-        return;
-    }
-
+    // Сначала отправляем обновление состояния игры всем игрокам
     game.players.forEach((username) => {
         players.get(username).ws.send(JSON.stringify({
             type: 'update',
@@ -145,6 +129,28 @@ function handleMove(ws, { gameId, index, player }) {
             gameState: game.gameState,
         }));
     });
+
+    // Затем проверяем победителя и ничью
+    const winner = checkWinner(game.gameState);
+    if (winner) {
+        setTimeout(() => {
+            game.players.forEach((username) => {
+                players.get(username).ws.send(JSON.stringify({ type: 'winner', winner }));
+            });
+            games.delete(gameId);
+        }, 100);
+        return;
+    }
+
+    if (game.gameState.every((cell) => cell !== null)) {
+        setTimeout(() => {
+            game.players.forEach((username) => {
+                players.get(username).ws.send(JSON.stringify({ type: 'draw' }));
+            });
+            games.delete(gameId);
+        }, 100);
+        return;
+    }
 }
 
 function handleDisconnect(ws) {

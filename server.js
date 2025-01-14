@@ -68,50 +68,42 @@ function handleChallenge(ws, { challenger, challenged }) {
 function handleAcceptChallenge(ws, { challenger }) {
     const challengerPlayer = players.get(challenger);
     if (!challengerPlayer) {
-        console.error(`Игрок ${challenger} не найден в списке игроков.`);
         ws.send(JSON.stringify({ type: 'error', message: 'Игрок уже вышел' }));
         return;
     }
 
-    console.log(`Игрок ${ws.username} принял вызов от ${challenger}`);
-
     const gameId = uuidv4();
     const gameState = Array(9).fill(null);
 
-    console.log(`Создана новая игра с ID: ${gameId}`);
-    console.log(`Игроки: ${challenger} и ${ws.username}`);
-
+    // Первый игрок (challenger) играет за X
     games.set(gameId, {
         players: [challenger, ws.username],
-        currentPlayer: challenger,
+        currentPlayer: 'X',
         gameState,
+        playerRoles: {
+            [challenger]: 'X',
+            [ws.username]: 'O'
+        }
     });
 
-    try {
-        challengerPlayer.ws.send(JSON.stringify({
-            type: 'start',
-            gameId,
-            currentPlayer: challenger,
-            gameState,
-        }));
-        console.log(`Сообщение о начале игры отправлено игроку ${challenger}`);
-    } catch (err) {
-        console.error(`Ошибка отправки сообщения игроку ${challenger}:`, err);
-    }
+    // Отправляем сообщение первому игроку
+    challengerPlayer.ws.send(JSON.stringify({
+        type: 'start',
+        gameId,
+        currentPlayer: 'X',
+        playerRole: 'X',
+        gameState,
+    }));
 
-    try {
-        ws.send(JSON.stringify({
-            type: 'start',
-            gameId,
-            currentPlayer: challenger,
-            gameState,
-        }));
-        console.log(`Сообщение о начале игры отправлено игроку ${ws.username}`);
-    } catch (err) {
-        console.error(`Ошибка отправки сообщения игроку ${ws.username}:`, err);
-    }
+    // Отправляем сообщение второму игроку
+    ws.send(JSON.stringify({
+        type: 'start',
+        gameId,
+        currentPlayer: 'X',
+        playerRole: 'O',
+        gameState,
+    }));
 }
-
 
 function handleMove(ws, { gameId, index, player }) {
     const game = games.get(gameId);

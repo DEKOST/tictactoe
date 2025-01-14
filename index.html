@@ -25,7 +25,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 2em;
             background-color: #f0f0f0;
             cursor: pointer;
         }
@@ -36,27 +35,46 @@
             margin-top: 20px;
             font-size: 1.5em;
         }
+        .online-players {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="board" id="board">
-        <div class="cell" data-index="0"></div>
-        <div class="cell" data-index="1"></div>
-        <div class="cell" data-index="2"></div>
-        <div class="cell" data-index="3"></div>
-        <div class="cell" data-index="4"></div>
-        <div class="cell" data-index="5"></div>
-        <div class="cell" data-index="6"></div>
-        <div class="cell" data-index="7"></div>
-        <div class="cell" data-index="8"></div>
+    <div id="login">
+        <input type="text" id="username" placeholder="Введите ваш юзернейм">
+        <button id="loginBtn">Войти</button>
     </div>
-    <div class="status" id="status">Ожидание второго игрока...</div>
+    <div id="game" style="display: none;">
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <div class="status" id="status">Ожидание второго игрока...</div>
+        <div class="online-players" id="onlinePlayers"></div>
+    </div>
 
     <script>
+        const loginDiv = document.getElementById('login');
+        const gameDiv = document.getElementById('game');
         const board = document.getElementById('board');
         const status = document.getElementById('status');
+        const onlinePlayersDiv = document.getElementById('onlinePlayers');
+        const usernameInput = document.getElementById('username');
+        const loginBtn = document.getElementById('loginBtn');
+
         let playerRole = '';
         let currentPlayer = 'X';
+        let username = '';
+        let gameId = '';
+        let onlinePlayers = [];
 
         const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
@@ -64,11 +82,22 @@
             const data = JSON.parse(event.data);
 
             switch (data.type) {
+                case 'login':
+                    if (data.success) {
+                        username = usernameInput.value;
+                        loginDiv.style.display = 'none';
+                        gameDiv.style.display = 'block';
+                        updateOnlinePlayers(data.players);
+                    } else {
+                        alert('Ошибка входа: ' + data.message);
+                    }
+                    break;
                 case 'role':
                     playerRole = data.role;
                     status.textContent = `Вы играете за ${playerRole}`;
                     break;
                 case 'start':
+                    gameId = data.gameId;
                     currentPlayer = data.currentPlayer;
                     updateBoard(data.gameState);
                     break;
@@ -86,21 +115,54 @@
                     updateBoard(data.gameState);
                     status.textContent = 'Игра сброшена. Начинаем заново!';
                     break;
+                case 'onlinePlayers':
+                    updateOnlinePlayers(data.players);
+                    break;
             }
         };
+
+        loginBtn.addEventListener('click', () => {
+            const username = usernameInput.value;
+            if (username) {
+                ws.send(JSON.stringify({ type: 'login', username }));
+            } else {
+                alert('Пожалуйста, введите юзернейм');
+            }
+        });
 
         board.addEventListener('click', (event) => {
             const cell = event.target;
             const index = cell.getAttribute('data-index');
 
             if (playerRole === currentPlayer && !cell.textContent) {
-                ws.send(JSON.stringify({ type: 'move', index, player: playerRole }));
+                ws.send(JSON.stringify({ type: 'move', index, player: playerRole, gameId }));
             }
         });
 
         function updateBoard(gameState) {
             gameState.forEach((value, index) => {
-                board.children[index].textContent = value;
+                const cell = board.children[index];
+                cell.textContent = '';
+                if (value === 'X') {
+                    cell.innerHTML = '<img src="image_bm.webp" alt="X">';
+                } else if (value === 'O') {
+                    cell.innerHTML = '<img src="image_alim.webp" alt="O">';
+                }
+            });
+        }
+
+        function updateOnlinePlayers(players) {
+            onlinePlayers = players;
+            onlinePlayersDiv.innerHTML = '<h3>Онлайн игроки:</h3>';
+            players.forEach(player => {
+                if (player !== username) {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.textContent = player;
+                    playerDiv.addEventListener('click', () => {
+                        ws.send(JSON.stringify({ type: 'challenge', challenger: username, challenged: player }));
+                    });
+                    onlinePlayersDiv.appendChild(playerDiv);
+                }
             });
         }
     </script>

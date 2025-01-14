@@ -33,6 +33,7 @@
             <button id="declineBtn">Отклонить</button>
         </div>
     </div>
+    <div id="notifications" class="notifications"></div>
 
 
     <script>
@@ -92,8 +93,11 @@
                                     ? Math.round((player.stats.wins / player.stats.games) * 100) 
                                     : 0;
                                 
+                                const isDisabled = player.isInGame || player.hasPendingChallenge;
+                                
                                 return `
-                                    <div class="player-card ${isCurrentPlayer ? 'current-player' : ''}" 
+                                    <div class="player-card ${isCurrentPlayer ? 'current-player' : ''} 
+                                                ${isDisabled ? 'player-busy' : ''}" 
                                          data-username="${player.username}">
                                         <div class="player-info">
                                             <span class="player-name">${player.username}</span>
@@ -104,8 +108,10 @@
                                                     ${winRate}% побед
                                                 </span>
                                             </span>
+                                            ${player.isInGame ? '<span class="status">В игре</span>' : ''}
+                                            ${player.hasPendingChallenge ? '<span class="status">Ожидает ответа</span>' : ''}
                                         </div>
-                                        ${!isCurrentPlayer ? `
+                                        ${!isCurrentPlayer && !isDisabled ? `
                                             <button class="challenge-btn">
                                                 Вызвать
                                             </button>
@@ -179,6 +185,15 @@
                                     ${game.winner ? `Победитель: ${game.winner}` : 'Ничья'}
                                 </li>
                             `).join('');
+                        break;
+                    case 'challengeSent':
+                        showNotification(`Вызов на дуэль отправлен игроку ${data.challenged}. Ожидаем ответ...`);
+                        break;
+                    case 'challengeError':
+                        showNotification(data.message, 'error');
+                        break;
+                    case 'challengeDeclined':
+                        showNotification(`Игрок ${data.player} отклонил вызов на дуэль`, 'error');
                         break;
                     default:
                         console.warn('Неизвестный тип сообщения:', data.type);
@@ -259,6 +274,20 @@
                     cell.innerHTML = '<img src="image_alim.webp" alt="O" class="cell-image">';
                 }
             });
+        }
+        // Функция для показа уведомлений
+        function showNotification(message, type = 'success') {
+            const notifications = document.getElementById('notifications');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            notifications.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         // Подключаем WebSocket при загрузке страницы

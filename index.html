@@ -51,6 +51,10 @@
             loginBtn.click(); // Автоматически входим, если юзернейм сохранен
         }
 
+        ws.onopen = () => {
+            console.log('Соединение установлено');
+        };
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
@@ -106,6 +110,10 @@
             }
         };
 
+        ws.onclose = () => {
+            console.log('Соединение закрыто');
+        };
+
         // Функция для обновления списка онлайн-игроков
         function updateOnlinePlayers(players) {
             onlinePlayersDiv.innerHTML = '<h3>Онлайн игроки:</h3>';
@@ -115,11 +123,15 @@
                         const playerDiv = document.createElement('div');
                         playerDiv.textContent = player;
                         playerDiv.addEventListener('click', () => {
-                            ws.send(JSON.stringify({
-                                type: 'challenge',
-                                challenger: username,
-                                challenged: player
-                            }));
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'challenge',
+                                    challenger: username,
+                                    challenged: player
+                                }));
+                            } else {
+                                console.error('Соединение WebSocket закрыто');
+                            }
                         });
                         onlinePlayersDiv.appendChild(playerDiv);
                     }
@@ -132,7 +144,11 @@
         loginBtn.addEventListener('click', () => {
             const username = usernameInput.value;
             if (username) {
-                ws.send(JSON.stringify({ type: 'login', username }));
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'login', username }));
+                } else {
+                    console.error('Соединение WebSocket закрыто');
+                }
             } else {
                 alert('Пожалуйста, введите юзернейм');
             }
@@ -143,7 +159,11 @@
             const index = cell.getAttribute('data-index');
 
             if (playerRole === currentPlayer && !cell.textContent) {
-                ws.send(JSON.stringify({ type: 'move', index, player: playerRole, gameId }));
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'move', index, player: playerRole, gameId }));
+                } else {
+                    console.error('Соединение WebSocket закрыто');
+                }
             }
         });
 

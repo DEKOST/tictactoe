@@ -33,14 +33,7 @@
             <button id="declineBtn">Отклонить</button>
         </div>
     </div>
-    <div id="playersList"></div>
-        <h3>Игроки онлайн:</h3>
-        <ul id="onlinePlayers"></ul>
-    </div>
-    <div id="gameHistory">
-        <h3>История игр:</h3>
-        <ul id="historyList"></ul>
-    </div>
+
 
     <script>
         const loginDiv = document.getElementById('login');
@@ -95,11 +88,29 @@
                         playersList.innerHTML = data.players
                             .map(player => `
                                 <li>
-                                    ${player.username} 
-                                    (Побед: ${player.stats.wins}, 
-                                    Игр: ${player.stats.games})
+                                    <span class="player-name ${player.username !== username ? 'clickable' : ''}" 
+                                          data-username="${player.username}">
+                                        ${player.username} 
+                                        (Побед: ${player.stats.wins}, 
+                                        Игр: ${player.stats.games})
+                                    </span>
                                 </li>
                             `).join('');
+
+                        // Добавляем обработчики кликов для вызова на дуэль
+                        const playerNames = playersList.querySelectorAll('.player-name.clickable');
+                        playerNames.forEach(playerName => {
+                            playerName.addEventListener('click', () => {
+                                const challengedPlayer = playerName.dataset.username;
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'challenge',
+                                        challenger: username,
+                                        challenged: challengedPlayer
+                                    }));
+                                }
+                            });
+                        });
                         break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
@@ -235,6 +246,5 @@
 
         // Подключаем WebSocket при загрузке страницы
         connectWebSocket();
-    </script>
-</body>
+    </script></body>
 </html>

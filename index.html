@@ -111,6 +111,7 @@
                         currentPlayer = data.currentPlayer;
                         playerRole = currentPlayer;
                         updateBoard(data.gameState);
+                        status.textContent = `Игра началась! Ваш ход: ${currentPlayer}`;
                         break;
                     case 'update':
                         currentPlayer = data.currentPlayer;

@@ -87,17 +87,23 @@
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
+        
             switch (data.type) {
                 case 'login':
                     if (data.success) {
                         username = usernameInput.value;
-                        localStorage.setItem('username', username); // Сохраняем юзернейм
+                        localStorage.setItem('username', username);
                         loginDiv.style.display = 'none';
                         gameDiv.style.display = 'block';
-                        updateOnlinePlayers(data.players);
                     } else {
                         alert('Ошибка входа: ' + data.message);
+                    }
+                    break;
+                case 'onlinePlayers':
+                    if (Array.isArray(data.players)) { // Проверяем, что players - это массив
+                        updateOnlinePlayers(data.players);
+                    } else {
+                        console.error('Ошибка: players не является массивом', data.players);
                     }
                     break;
                 case 'role':
@@ -123,12 +129,29 @@
                     updateBoard(data.gameState);
                     status.textContent = 'Игра сброшена. Начинаем заново!';
                     break;
-                case 'onlinePlayers':
-                    updateOnlinePlayers(data.players);
-                    break;
+                default:
+                    console.warn('Неизвестный тип сообщения:', data.type);
             }
         };
-
+        
+        // Функция для обновления списка онлайн-игроков
+        function updateOnlinePlayers(players) {
+            onlinePlayersDiv.innerHTML = '<h3>Онлайн игроки:</h3>';
+            if (Array.isArray(players)) { // Проверяем, что players - это массив
+                players.forEach(player => {
+                    if (player !== username) { // Не показываем себя в списке
+                        const playerDiv = document.createElement('div');
+                        playerDiv.textContent = player;
+                        playerDiv.addEventListener('click', () => {
+                            ws.send(JSON.stringify({ type: 'challenge', challenger: username, challenged: player }));
+                        });
+                        onlinePlayersDiv.appendChild(playerDiv);
+                    }
+                });
+            } else {
+                console.error('Ошибка: players не является массивом', players);
+            }
+        }
         loginBtn.addEventListener('click', () => {
             const username = usernameInput.value;
             if (username) {

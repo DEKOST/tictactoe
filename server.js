@@ -60,6 +60,8 @@ function handleChallenge(ws, { challenger, challenged }) {
         return;
     }
 
+    console.log(`Игрок ${challenger} вызывает ${challenged} на дуэль`);
+
     challengedPlayer.ws.send(JSON.stringify({ type: 'challenge', challenger }));
 }
 
@@ -72,6 +74,8 @@ function handleAcceptChallenge(ws, { challenger }) {
 
     const gameId = uuidv4();
     const gameState = Array(9).fill(null);
+
+    console.log(`Игра начата между ${challenger} и ${ws.username}, gameId: ${gameId}`);
 
     games.set(gameId, {
         players: [challenger, ws.username],

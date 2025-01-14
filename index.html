@@ -34,6 +34,17 @@
         </div>
     </div>
     <div id="notifications" class="notifications"></div>
+    <div class="game-info">
+        <div id="currentDuels" class="current-duels">
+            <h3>Текущие дуэли</h3>
+            <div id="duelsList"></div>
+        </div>
+        
+        <div id="gameHistory" class="game-history">
+            <h3>История игр</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
 
 
     <script>
@@ -93,7 +104,9 @@
                                     ? Math.round((player.stats.wins / player.stats.games) * 100) 
                                     : 0;
                                 
-                                const isDisabled = player.isInGame || player.hasPendingChallenge;
+                                const isDisabled = player.isInGame || 
+                                                 player.hasPendingChallenge || 
+                                                 isCurrentPlayer;
                                 
                                 return `
                                     <div class="player-card ${isCurrentPlayer ? 'current-player' : ''} 
@@ -110,6 +123,7 @@
                                             </span>
                                             ${player.isInGame ? '<span class="status">В игре</span>' : ''}
                                             ${player.hasPendingChallenge ? '<span class="status">Ожидает ответа</span>' : ''}
+                                            ${isCurrentPlayer ? '<span class="status">Это вы</span>' : ''}
                                         </div>
                                         ${!isCurrentPlayer && !isDisabled ? `
                                             <button class="challenge-btn">
@@ -134,6 +148,16 @@
                                 }
                             });
                         });
+
+                        // Добавляем отображение текущих дуэлей
+                        const duelsList = document.getElementById('duelsList');
+                        duelsList.innerHTML = data.currentDuels.length ? data.currentDuels
+                            .map(duel => `
+                                <div class="duel-item">
+                                    <span class="duel-players">${duel.players[0]} vs ${duel.players[1]}</span>
+                                    <span class="duel-time">Начало: ${new Date(duel.startTime).toLocaleTimeString()}</span>
+                                </div>
+                            `).join('') : '<p>Нет активных дуэлей</p>';
                         break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
@@ -177,14 +201,24 @@
                         break;
                     case 'gameHistory':
                         const historyList = document.getElementById('historyList');
-                        historyList.innerHTML = data.history
+                        historyList.innerHTML = data.history.length ? data.history
                             .map(game => `
-                                <li>
-                                    ${new Date(game.date).toLocaleString()} - 
-                                    ${game.players[0]} vs ${game.players[1]}: 
-                                    ${game.winner ? `Победитель: ${game.winner}` : 'Ничья'}
-                                </li>
-                            `).join('');
+                                <div class="history-item">
+                                    <div class="history-header">
+                                        <span class="history-time">${new Date(game.date).toLocaleString()}</span>
+                                    </div>
+                                    <div class="history-players">
+                                        ${game.players[0]} vs ${game.players[1]}
+                                    </div>
+                                    <div class="history-result">
+                                        ${game.abandoned 
+                                            ? `<span class="abandoned">Игрок ${game.abandonedBy} покинул игру</span>`
+                                            : game.winner 
+                                                ? `Победитель: ${game.winner}` 
+                                                : 'Ничья'}
+                                    </div>
+                                </div>
+                            `).join('') : '<p>Нет записей</p>';
                         break;
                     case 'challengeSent':
                         showNotification(`Вызов на дуэль отправлен игроку ${data.challenged}. Ожидаем ответ...`);

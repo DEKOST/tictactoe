@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8080 });
 
-let players = {};
+let players = {}; // Хранит подключенных игроков
 let games = {};
 let gameIdCounter = 1;
 
@@ -17,15 +17,18 @@ wss.on('connection', (ws) => {
                 if (Object.values(players).includes(data.username)) {
                     ws.send(JSON.stringify({ type: 'login', success: false, message: 'Юзернейм уже занят' }));
                 } else {
-                    players[ws] = data.username;
+                    players[ws] = data.username; // Сохраняем юзернейм
                     ws.send(JSON.stringify({ type: 'login', success: true }));
-                    broadcastOnlinePlayers();
+                    broadcastOnlinePlayers(); // Отправляем обновленный список игроков
                 }
                 break;
             case 'challenge':
                 const challenged = Object.keys(players).find(key => players[key] === data.challenged);
                 if (challenged) {
-                    challenged.send(JSON.stringify({ type: 'challenge', challenger: data.challenger }));
+                    challenged.send(JSON.stringify({ 
+                        type: 'challenge', 
+                        challenger: data.challenger 
+                    }));
                 }
                 break;
             case 'acceptChallenge':
@@ -37,8 +40,18 @@ wss.on('connection', (ws) => {
                         gameState: ['', '', '', '', '', '', '', '', ''],
                         currentPlayer: 'X'
                     };
-                    challenger.send(JSON.stringify({ type: 'start', gameId, gameState: games[gameId].gameState, currentPlayer: 'X' }));
-                    ws.send(JSON.stringify({ type: 'start', gameId, gameState: games[gameId].gameState, currentPlayer: 'O' }));
+                    challenger.send(JSON.stringify({ 
+                        type: 'start', 
+                        gameId, 
+                        gameState: games[gameId].gameState, 
+                        currentPlayer: 'X' 
+                    }));
+                    ws.send(JSON.stringify({ 
+                        type: 'start', 
+                        gameId, 
+                        gameState: games[gameId].gameState, 
+                        currentPlayer: 'O' 
+                    }));
                 }
                 break;
             case 'move':
@@ -47,7 +60,11 @@ wss.on('connection', (ws) => {
                     game.gameState[data.index] = data.player;
                     game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
                     game.players.forEach(player => {
-                        player.send(JSON.stringify({ type: 'update', gameState: game.gameState, currentPlayer: game.currentPlayer }));
+                        player.send(JSON.stringify({ 
+                            type: 'update', 
+                            gameState: game.gameState, 
+                            currentPlayer: game.currentPlayer 
+                        }));
                     });
 
                     const winner = checkWinner(game.gameState);
@@ -69,18 +86,19 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         console.log('Подключение закрыто');
-        delete players[ws];
-        broadcastOnlinePlayers();
+        delete players[ws]; // Удаляем игрока из списка
+        broadcastOnlinePlayers(); // Отправляем обновленный список игроков
     });
 });
 
+// Функция для отправки списка онлайн-игроков всем клиентам
 function broadcastOnlinePlayers() {
     const onlinePlayers = Object.values(players); // Получаем список юзернеймов
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ 
                 type: 'onlinePlayers', 
-                players: onlinePlayers // Отправляем массив игроков
+                players: onlinePlayers 
             }));
         }
     });
@@ -108,7 +126,11 @@ function resetGame(gameId) {
         game.gameState = ['', '', '', '', '', '', '', '', ''];
         game.currentPlayer = 'X';
         game.players.forEach(player => {
-            player.send(JSON.stringify({ type: 'reset', gameState: game.gameState, currentPlayer: game.currentPlayer }));
+            player.send(JSON.stringify({ 
+                type: 'reset', 
+                gameState: game.gameState, 
+                currentPlayer: game.currentPlayer 
+            }));
         });
     }
 }

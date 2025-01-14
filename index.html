@@ -33,7 +33,14 @@
             <button id="declineBtn">Отклонить</button>
         </div>
     </div>
-
+    <div id="playersList"></div>
+        <h3>Игроки онлайн:</h3>
+        <ul id="onlinePlayers"></ul>
+    </div>
+    <div id="gameHistory">
+        <h3>История игр:</h3>
+        <ul id="historyList"></ul>
+    </div>
 
     <script>
         const loginDiv = document.getElementById('login');
@@ -84,11 +91,15 @@
                         }
                         break;
                     case 'onlinePlayers':
-                        if (Array.isArray(data.players)) {
-                            updateOnlinePlayers(data.players);
-                        } else {
-                            console.error('Ошибка: players не является массивом', data.players);
-                        }
+                        const playersList = document.getElementById('onlinePlayers');
+                        playersList.innerHTML = data.players
+                            .map(player => `
+                                <li>
+                                    ${player.username} 
+                                    (Побед: ${player.stats.wins}, 
+                                    Игр: ${player.stats.games})
+                                </li>
+                            `).join('');
                         break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
@@ -129,6 +140,17 @@
                     case 'reset':
                         updateBoard(data.gameState);
                         status.textContent = 'Игра сброшена. Начинаем заново!';
+                        break;
+                    case 'gameHistory':
+                        const historyList = document.getElementById('historyList');
+                        historyList.innerHTML = data.history
+                            .map(game => `
+                                <li>
+                                    ${new Date(game.date).toLocaleString()} - 
+                                    ${game.players[0]} vs ${game.players[1]}: 
+                                    ${game.winner ? `Победитель: ${game.winner}` : 'Ничья'}
+                                </li>
+                            `).join('');
                         break;
                     default:
                         console.warn('Неизвестный тип сообщения:', data.type);

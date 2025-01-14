@@ -103,6 +103,11 @@ wss.on('connection', (ws) => {
         delete players[ws]; // Удаляем игрока из списка
         broadcastOnlinePlayers(); // Уведомляем всех об отключении
     });
+
+    ws.on('error', (error) => {
+        console.error('Ошибка WebSocket:', error);
+        ws.close();
+    });
 });
 
 // Функция для отправки списка онлайн-игроков всем клиентам

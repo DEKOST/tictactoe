@@ -84,9 +84,10 @@
             usernameInput.value = savedUsername;
             loginBtn.click(); // Автоматически входим, если юзернейм сохранен
         }
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-        
+
             switch (data.type) {
                 case 'login':
                     if (data.success) {
@@ -108,15 +109,16 @@
                 case 'challenge':
                     const accept = confirm(`Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`);
                     if (accept) {
-                        ws.send(JSON.stringify({ 
-                            type: 'acceptChallenge', 
-                            challenger: data.challenger 
+                        ws.send(JSON.stringify({
+                            type: 'acceptChallenge',
+                            challenger: data.challenger
                         }));
                     }
                     break;
                 case 'start':
                     gameId = data.gameId;
                     currentPlayer = data.currentPlayer;
+                    playerRole = currentPlayer;
                     updateBoard(data.gameState);
                     break;
                 case 'update':
@@ -137,7 +139,7 @@
                     console.warn('Неизвестный тип сообщения:', data.type);
             }
         };
-        
+
         // Функция для обновления списка онлайн-игроков
         function updateOnlinePlayers(players) {
             onlinePlayersDiv.innerHTML = '<h3>Онлайн игроки:</h3>';
@@ -147,10 +149,10 @@
                         const playerDiv = document.createElement('div');
                         playerDiv.textContent = player;
                         playerDiv.addEventListener('click', () => {
-                            ws.send(JSON.stringify({ 
-                                type: 'challenge', 
-                                challenger: username, 
-                                challenged: player 
+                            ws.send(JSON.stringify({
+                                type: 'challenge',
+                                challenger: username,
+                                challenged: player
                             }));
                         });
                         onlinePlayersDiv.appendChild(playerDiv);
@@ -160,7 +162,7 @@
                 console.error('Ошибка: players не является массивом', players);
             }
         }
-        
+
         loginBtn.addEventListener('click', () => {
             const username = usernameInput.value;
             if (username) {
@@ -187,21 +189,6 @@
                     cell.innerHTML = '<img src="image_bm.webp" alt="X">';
                 } else if (value === 'O') {
                     cell.innerHTML = '<img src="image_alim.webp" alt="O">';
-                }
-            });
-        }
-
-        function updateOnlinePlayers(players) {
-            onlinePlayers = players;
-            onlinePlayersDiv.innerHTML = '<h3>Онлайн игроки:</h3>';
-            players.forEach(player => {
-                if (player !== username) {
-                    const playerDiv = document.createElement('div');
-                    playerDiv.textContent = player;
-                    playerDiv.addEventListener('click', () => {
-                        ws.send(JSON.stringify({ type: 'challenge', challenger: username, challenged: player }));
-                    });
-                    onlinePlayersDiv.appendChild(playerDiv);
                 }
             });
         }

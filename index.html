@@ -25,7 +25,7 @@
         </div>
         <div class="status" id="status">Ожидание второго игрока...</div>
         <div class="online-players" id="onlinePlayers"></div>
-        <div id="gameHistory" class="game-history"></div>
+        <div id="gameHistory" class="game-history">
             <h3>История игр</h3>
             <div id="historyList"></div>
         </div>
@@ -142,17 +142,6 @@
                                 }
                             });
                         });
-
-                        // Добавляем отображение текущих дуэлей
-                        const duelsList = document.getElementById('duelsList');
-                        duelsList.innerHTML = data.currentDuels.length ? data.currentDuels
-                            .map(duel => `
-                                <div class="duel-item">
-                                    <span class="duel-players">${duel.players[0]} vs ${duel.players[1]}</span>
-                                    <span class="duel-time">Начало: ${new Date(duel.startTime).toLocaleTimeString()}</span>
-                                </div>
-                            `).join('') : '<p>Нет активных дуэлей</p>';
-                        break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
                         challengeText.textContent = `Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`;

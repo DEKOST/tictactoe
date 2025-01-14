@@ -204,9 +204,9 @@
                 const cell = board.children[index];
                 cell.textContent = '';
                 if (value === 'X') {
-                    cell.innerHTML = '<img src="image_bm.webp" alt="X">';
+                    cell.innerHTML = '<img src="image_bm.webp" alt="X" class="cell-image">';
                 } else if (value === 'O') {
-                    cell.innerHTML = '<img src="image_alim.webp" alt="O">';
+                    cell.innerHTML = '<img src="image_alim.webp" alt="O" class="cell-image">';
                 }
             });
         }

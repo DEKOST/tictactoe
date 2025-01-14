@@ -78,6 +78,13 @@
 
         const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
 
+        // Проверяем, есть ли сохраненный юзернейм в localStorage
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername) {
+            usernameInput.value = savedUsername;
+            loginBtn.click(); // Автоматически входим, если юзернейм сохранен
+        }
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
@@ -85,6 +92,7 @@
                 case 'login':
                     if (data.success) {
                         username = usernameInput.value;
+                        localStorage.setItem('username', username); // Сохраняем юзернейм
                         loginDiv.style.display = 'none';
                         gameDiv.style.display = 'block';
                         updateOnlinePlayers(data.players);

@@ -68,14 +68,18 @@ function handleChallenge(ws, { challenger, challenged }) {
 function handleAcceptChallenge(ws, { challenger }) {
     const challengerPlayer = players.get(challenger);
     if (!challengerPlayer) {
+        console.error(`Игрок ${challenger} не найден в списке игроков.`);
         ws.send(JSON.stringify({ type: 'error', message: 'Игрок уже вышел' }));
         return;
     }
 
+    console.log(`Игрок ${ws.username} принял вызов от ${challenger}`);
+
     const gameId = uuidv4();
     const gameState = Array(9).fill(null);
 
-    console.log(`Игра начата между ${challenger} и ${ws.username}, gameId: ${gameId}`);
+    console.log(`Создана новая игра с ID: ${gameId}`);
+    console.log(`Игроки: ${challenger} и ${ws.username}`);
 
     games.set(gameId, {
         players: [challenger, ws.username],
@@ -83,19 +87,29 @@ function handleAcceptChallenge(ws, { challenger }) {
         gameState,
     });
 
-    challengerPlayer.ws.send(JSON.stringify({
-        type: 'start',
-        gameId,
-        currentPlayer: challenger,
-        gameState,
-    }));
+    try {
+        challengerPlayer.ws.send(JSON.stringify({
+            type: 'start',
+            gameId,
+            currentPlayer: challenger,
+            gameState,
+        }));
+        console.log(`Сообщение о начале игры отправлено ${challenger}`);
+    } catch (err) {
+        console.error(`Ошибка отправки сообщения для игрока ${challenger}:`, err);
+    }
 
-    ws.send(JSON.stringify({
-        type: 'start',
-        gameId,
-        currentPlayer: challenger,
-        gameState,
-    }));
+    try {
+        ws.send(JSON.stringify({
+            type: 'start',
+            gameId,
+            currentPlayer: challenger,
+            gameState,
+        }));
+        console.log(`Сообщение о начале игры отправлено ${ws.username}`);
+    } catch (err) {
+        console.error(`Ошибка отправки сообщения для игрока ${ws.username}:`, err);
+    }
 }
 
 function handleMove(ws, { gameId, index, player }) {

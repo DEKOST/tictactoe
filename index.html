@@ -86,22 +86,39 @@
                     case 'onlinePlayers':
                         const playersList = document.getElementById('onlinePlayers');
                         playersList.innerHTML = data.players
-                            .map(player => `
-                                <li>
-                                    <span class="player-name ${player.username !== username ? 'clickable' : ''}" 
-                                          data-username="${player.username}">
-                                        ${player.username} 
-                                        (Побед: ${player.stats.wins}, 
-                                        Игр: ${player.stats.games})
-                                    </span>
-                                </li>
-                            `).join('');
+                            .map(player => {
+                                const isCurrentPlayer = player.username === username;
+                                const winRate = player.stats.games > 0 
+                                    ? Math.round((player.stats.wins / player.stats.games) * 100) 
+                                    : 0;
+                                
+                                return `
+                                    <div class="player-card ${isCurrentPlayer ? 'current-player' : ''}" 
+                                         data-username="${player.username}">
+                                        <div class="player-info">
+                                            <span class="player-name">${player.username}</span>
+                                            <span class="player-stats">
+                                                Побед: ${player.stats.wins} | 
+                                                Игр: ${player.stats.games} | 
+                                                <span class="win-rate">
+                                                    ${winRate}% побед
+                                                </span>
+                                            </span>
+                                        </div>
+                                        ${!isCurrentPlayer ? `
+                                            <button class="challenge-btn">
+                                                Вызвать
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('');
 
                         // Добавляем обработчики кликов для вызова на дуэль
-                        const playerNames = playersList.querySelectorAll('.player-name.clickable');
-                        playerNames.forEach(playerName => {
-                            playerName.addEventListener('click', () => {
-                                const challengedPlayer = playerName.dataset.username;
+                        const playerCards = playersList.querySelectorAll('.player-card:not(.current-player)');
+                        playerCards.forEach(card => {
+                            card.addEventListener('click', () => {
+                                const challengedPlayer = card.dataset.username;
                                 if (ws && ws.readyState === WebSocket.OPEN) {
                                     ws.send(JSON.stringify({
                                         type: 'challenge',

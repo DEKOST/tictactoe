@@ -75,10 +75,13 @@ wss.on('connection', (ws) => {
 });
 
 function broadcastOnlinePlayers() {
-    const onlinePlayers = Object.values(players);
+    const onlinePlayers = Object.values(players); // Получаем список юзернеймов
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: 'onlinePlayers', players: onlinePlayers }));
+            client.send(JSON.stringify({ 
+                type: 'onlinePlayers', 
+                players: onlinePlayers // Отправляем массив игроков
+            }));
         }
     });
 }

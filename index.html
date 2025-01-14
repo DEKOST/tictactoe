@@ -42,77 +42,86 @@
         let gameId = '';
         let onlinePlayers = [];
 
-        const ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+        let ws;
 
-        // Проверяем, есть ли сохраненный юзернейм в localStorage
-        const savedUsername = localStorage.getItem('username');
-        if (savedUsername) {
-            usernameInput.value = savedUsername;
-            loginBtn.click(); // Автоматически входим, если юзернейм сохранен
+        function connectWebSocket() {
+            ws = new WebSocket('wss://tictactoe-w7mm.onrender.com');
+
+            ws.onopen = () => {
+                console.log('Соединение установлено');
+                // Проверяем, есть ли сохраненный юзернейм в localStorage
+                const savedUsername = localStorage.getItem('username');
+                if (savedUsername) {
+                    usernameInput.value = savedUsername;
+                    loginBtn.click(); // Автоматически входим, если юзернейм сохранен
+                }
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                switch (data.type) {
+                    case 'login':
+                        if (data.success) {
+                            username = usernameInput.value;
+                            localStorage.setItem('username', username);
+                            loginDiv.style.display = 'none';
+                            gameDiv.style.display = 'block';
+                        } else {
+                            alert('Ошибка входа: ' + data.message);
+                        }
+                        break;
+                    case 'onlinePlayers':
+                        if (Array.isArray(data.players)) {
+                            updateOnlinePlayers(data.players);
+                        } else {
+                            console.error('Ошибка: players не является массивом', data.players);
+                        }
+                        break;
+                    case 'challenge':
+                        const accept = confirm(`Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`);
+                        if (accept) {
+                            ws.send(JSON.stringify({
+                                type: 'acceptChallenge',
+                                challenger: data.challenger
+                            }));
+                        }
+                        break;
+                    case 'start':
+                        gameId = data.gameId;
+                        currentPlayer = data.currentPlayer;
+                        playerRole = currentPlayer;
+                        updateBoard(data.gameState);
+                        break;
+                    case 'update':
+                        currentPlayer = data.currentPlayer;
+                        updateBoard(data.gameState);
+                        break;
+                    case 'winner':
+                        status.textContent = `Игрок ${data.winner} выиграл!`;
+                        break;
+                    case 'draw':
+                        status.textContent = 'Ничья!';
+                        break;
+                    case 'reset':
+                        updateBoard(data.gameState);
+                        status.textContent = 'Игра сброшена. Начинаем заново!';
+                        break;
+                    default:
+                        console.warn('Неизвестный тип сообщения:', data.type);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Соединение закрыто');
+                setTimeout(connectWebSocket, 1000); // Попытка переподключения через 1 секунду
+            };
+
+            ws.onerror = (error) => {
+                console.error('Ошибка WebSocket:', error);
+                ws.close();
+            };
         }
-
-        ws.onopen = () => {
-            console.log('Соединение установлено');
-        };
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-
-            switch (data.type) {
-                case 'login':
-                    if (data.success) {
-                        username = usernameInput.value;
-                        localStorage.setItem('username', username);
-                        loginDiv.style.display = 'none';
-                        gameDiv.style.display = 'block';
-                    } else {
-                        alert('Ошибка входа: ' + data.message);
-                    }
-                    break;
-                case 'onlinePlayers':
-                    if (Array.isArray(data.players)) {
-                        updateOnlinePlayers(data.players);
-                    } else {
-                        console.error('Ошибка: players не является массивом', data.players);
-                    }
-                    break;
-                case 'challenge':
-                    const accept = confirm(`Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`);
-                    if (accept) {
-                        ws.send(JSON.stringify({
-                            type: 'acceptChallenge',
-                            challenger: data.challenger
-                        }));
-                    }
-                    break;
-                case 'start':
-                    gameId = data.gameId;
-                    currentPlayer = data.currentPlayer;
-                    playerRole = currentPlayer;
-                    updateBoard(data.gameState);
-                    break;
-                case 'update':
-                    currentPlayer = data.currentPlayer;
-                    updateBoard(data.gameState);
-                    break;
-                case 'winner':
-                    status.textContent = `Игрок ${data.winner} выиграл!`;
-                    break;
-                case 'draw':
-                    status.textContent = 'Ничья!';
-                    break;
-                case 'reset':
-                    updateBoard(data.gameState);
-                    status.textContent = 'Игра сброшена. Начинаем заново!';
-                    break;
-                default:
-                    console.warn('Неизвестный тип сообщения:', data.type);
-            }
-        };
-
-        ws.onclose = () => {
-            console.log('Соединение закрыто');
-        };
 
         // Функция для обновления списка онлайн-игроков
         function updateOnlinePlayers(players) {
@@ -123,7 +132,7 @@
                         const playerDiv = document.createElement('div');
                         playerDiv.textContent = player;
                         playerDiv.addEventListener('click', () => {
-                            if (ws.readyState === WebSocket.OPEN) {
+                            if (ws && ws.readyState === WebSocket.OPEN) {
                                 ws.send(JSON.stringify({
                                     type: 'challenge',
                                     challenger: username,
@@ -144,7 +153,7 @@
         loginBtn.addEventListener('click', () => {
             const username = usernameInput.value;
             if (username) {
-                if (ws.readyState === WebSocket.OPEN) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'login', username }));
                 } else {
                     console.error('Соединение WebSocket закрыто');
@@ -159,7 +168,7 @@
             const index = cell.getAttribute('data-index');
 
             if (playerRole === currentPlayer && !cell.textContent) {
-                if (ws.readyState === WebSocket.OPEN) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'move', index, player: playerRole, gameId }));
                 } else {
                     console.error('Соединение WebSocket закрыто');
@@ -178,6 +187,9 @@
                 }
             });
         }
+
+        // Подключаем WebSocket при загрузке страницы
+        connectWebSocket();
     </script>
 </body>
 </html>

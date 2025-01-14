@@ -63,6 +63,13 @@ body {
     background-color: #e0e0e0;
 }
 
+.cell-image {
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    object-fit: contain;
+}
+
 .status {
     margin-top: 20px;
     font-size: 1.5em;

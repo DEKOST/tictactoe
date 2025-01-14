@@ -26,6 +26,14 @@
         <div class="status" id="status">Ожидание второго игрока...</div>
         <div class="online-players" id="onlinePlayers"></div>
     </div>
+    <div id="challengePopup" class="popup" style="display: none;">
+        <div class="popup-content">
+            <p id="challengeText"></p>
+            <button id="acceptBtn">Принять</button>
+            <button id="declineBtn">Отклонить</button>
+        </div>
+    </div>
+
 
     <script>
         const loginDiv = document.getElementById('login');
@@ -35,6 +43,10 @@
         const onlinePlayersDiv = document.getElementById('onlinePlayers');
         const usernameInput = document.getElementById('username');
         const loginBtn = document.getElementById('loginBtn');
+        const challengePopup = document.getElementById('challengePopup');
+        const challengeText = document.getElementById('challengeText');
+        const acceptBtn = document.getElementById('acceptBtn');
+        const declineBtn = document.getElementById('declineBtn');
 
         let playerRole = '';
         let currentPlayer = 'X';
@@ -79,13 +91,20 @@
                         }
                         break;
                     case 'challenge':
-                        const accept = confirm(`Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`);
-                        if (accept) {
+                        challengePopup.style.display = 'block';
+                        challengeText.textContent = `Игрок ${data.challenger} вызывает вас на дуэль. Принять вызов?`;
+            
+                        acceptBtn.onclick = () => {
                             ws.send(JSON.stringify({
                                 type: 'acceptChallenge',
                                 challenger: data.challenger
                             }));
-                        }
+                            challengePopup.style.display = 'none';
+                        };
+            
+                        declineBtn.onclick = () => {
+                            challengePopup.style.display = 'none';
+                        };
                         break;
                     case 'start':
                         gameId = data.gameId;

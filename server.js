@@ -5,6 +5,8 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 const players = new Map(); // Карта для хранения игроков
 const games = new Map(); // Карта для хранения активных игр
+const gameHistory = []; // История игр
+const playerStats = new Map(); // Статистика игроков
 
 wss.on('connection', (ws) => {
     console.log('Новое соединение установлено');
@@ -45,11 +47,21 @@ function handleLogin(ws, username) {
         return;
     }
 
+    // Инициализируем статистику для нового игрока
+    if (!playerStats.has(username)) {
+        playerStats.set(username, { wins: 0, games: 0 });
+    }
+
     players.set(username, { ws, username });
     ws.username = username;
 
-    broadcastOnlinePlayers();
+    // Отправляем историю игр и статистику при входе
+    ws.send(JSON.stringify({ 
+        type: 'gameHistory', 
+        history: gameHistory.slice(-10) // Последние 10 игр
+    }));
 
+    broadcastOnlinePlayers();
     ws.send(JSON.stringify({ type: 'login', success: true }));
 }
 
@@ -133,20 +145,77 @@ function handleMove(ws, { gameId, index, player }) {
     // Затем проверяем победителя и ничью
     const winner = checkWinner(game.gameState);
     if (winner) {
+        // Обновляем статистику
+        const winnerUsername = game.players.find(username => 
+            game.playerRoles[username] === winner
+        );
+        const stats = playerStats.get(winnerUsername);
+        stats.wins += 1;
+        
+        // Обновляем статистику обоих игроков
+        game.players.forEach(username => {
+            const playerStat = playerStats.get(username);
+            playerStat.games += 1;
+        });
+
+        // Добавляем игру в историю
+        const gameResult = {
+            date: new Date().toISOString(),
+            players: game.players,
+            winner: winnerUsername,
+            moves: game.gameState
+        };
+        gameHistory.push(gameResult);
+
+        // Отправляем обновленные данные
         setTimeout(() => {
+            // Отправляем результат игры
             game.players.forEach((username) => {
-                players.get(username).ws.send(JSON.stringify({ type: 'winner', winner }));
+                players.get(username).ws.send(JSON.stringify({ 
+                    type: 'winner', 
+                    winner,
+                    gameResult
+                }));
             });
+            
+            // Обновляем список игроков с новой статистикой
+            broadcastOnlinePlayers();
+            
+            // Отправляем обновленную историю всем
+            broadcastGameHistory();
+            
             games.delete(gameId);
         }, 100);
         return;
     }
 
     if (game.gameState.every((cell) => cell !== null)) {
+        // Обновляем статистику обоих игроков
+        game.players.forEach(username => {
+            const playerStat = playerStats.get(username);
+            playerStat.games += 1;
+        });
+
+        // Добавляем игру в историю
+        const gameResult = {
+            date: new Date().toISOString(),
+            players: game.players,
+            winner: null, // ничья
+            moves: game.gameState
+        };
+        gameHistory.push(gameResult);
+
         setTimeout(() => {
             game.players.forEach((username) => {
-                players.get(username).ws.send(JSON.stringify({ type: 'draw' }));
+                players.get(username).ws.send(JSON.stringify({ 
+                    type: 'draw',
+                    gameResult 
+                }));
             });
+            
+            broadcastOnlinePlayers();
+            broadcastGameHistory();
+            
             games.delete(gameId);
         }, 100);
         return;
@@ -161,7 +230,11 @@ function handleDisconnect(ws) {
 }
 
 function broadcastOnlinePlayers() {
-    const playerList = Array.from(players.keys());
+    const playerList = Array.from(players.keys()).map(username => ({
+        username,
+        stats: playerStats.get(username)
+    }));
+    
     players.forEach(({ ws }) => {
         ws.send(JSON.stringify({ type: 'onlinePlayers', players: playerList }));
     });
@@ -186,6 +259,17 @@ function checkWinner(gameState) {
     }
 
     return null;
+}
+
+// Добавим новую функцию для рассылки истории игр
+function broadcastGameHistory() {
+    const recentHistory = gameHistory.slice(-10); // Последние 10 игр
+    players.forEach(({ ws }) => {
+        ws.send(JSON.stringify({ 
+            type: 'gameHistory', 
+            history: recentHistory 
+        }));
+    });
 }
 
 console.log('Сервер WebSocket запущен на ws://localhost:8080');

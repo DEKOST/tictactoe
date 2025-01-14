@@ -7,40 +7,27 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="game-container">
-        <div class="game-column">
-            <div id="board" class="board">
-                <div class="cell" data-index="0"></div>
-                <div class="cell" data-index="1"></div>
-                <div class="cell" data-index="2"></div>
-                <div class="cell" data-index="3"></div>
-                <div class="cell" data-index="4"></div>
-                <div class="cell" data-index="5"></div>
-                <div class="cell" data-index="6"></div>
-                <div class="cell" data-index="7"></div>
-                <div class="cell" data-index="8"></div>
-            </div>
-            
-            <div id="gameControls" style="display: none;">
-                <button id="leaveGameBtn" class="leave-game-btn">Покинуть игру</button>
-            </div>
-
-            <div class="game-info-compact">
-                <div id="currentDuels" class="info-box">
-                    <h3>Текущие дуэли</h3>
-                    <div id="duelsList" class="scrollable-list"></div>
-                </div>
-                
-                <div id="gameHistory" class="info-box">
-                    <h3>История игр</h3>
-                    <div id="historyList" class="scrollable-list"></div>
-                </div>
-            </div>
-
-            <div class="players-section">
-                <h3>Игроки онлайн</h3>
-                <div id="onlinePlayers" class="players-list"></div>
-            </div>
+    <div id="login">
+        <input type="text" id="username" placeholder="Введите ваш юзернейм">
+        <button id="loginBtn">Войти</button>
+    </div>
+    <div id="game" style="display: none;">
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <div class="status" id="status">Ожидание второго игрока...</div>
+        <div class="online-players" id="onlinePlayers"></div>
+        <div id="gameHistory" class="game-history"></div>
+            <h3>История игр</h3>
+            <div id="historyList"></div>
         </div>
     </div>
     <div id="challengePopup" class="popup" style="display: none;">
@@ -51,6 +38,7 @@
         </div>
     </div>
     <div id="notifications" class="notifications"></div>
+
 
 
     <script>
@@ -141,22 +129,18 @@
                             }).join('');
 
                         // Добавляем обработчики кликов для вызова на дуэль
-                        const challengeBtns = playersList.querySelectorAll('.challenge-btn');
-                        challengeBtns.forEach(btn => {
-                            const playerCard = btn.closest('.player-card');
-                            if (playerCard) {
-                                btn.addEventListener('click', (e) => {
-                                    e.stopPropagation(); // Предотвращаем всплытие события
-                                    const challengedPlayer = playerCard.dataset.username;
-                                    if (ws && ws.readyState === WebSocket.OPEN) {
-                                        ws.send(JSON.stringify({
-                                            type: 'challenge',
-                                            challenger: username,
-                                            challenged: challengedPlayer
-                                        }));
-                                    }
-                                });
-                            }
+                        const playerCards = playersList.querySelectorAll('.player-card:not(.current-player)');
+                        playerCards.forEach(card => {
+                            card.addEventListener('click', () => {
+                                const challengedPlayer = card.dataset.username;
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'challenge',
+                                        challenger: username,
+                                        challenged: challengedPlayer
+                                    }));
+                                }
+                            });
                         });
 
                         // Добавляем отображение текущих дуэлей
@@ -165,9 +149,9 @@
                             .map(duel => `
                                 <div class="duel-item">
                                     <span class="duel-players">${duel.players[0]} vs ${duel.players[1]}</span>
-                                    <span class="duel-time">${new Date(duel.startTime).toLocaleTimeString()}</span>
+                                    <span class="duel-time">Начало: ${new Date(duel.startTime).toLocaleTimeString()}</span>
                                 </div>
-                            `).join('') : '<p class="no-data">Нет активных дуэлей</p>';
+                            `).join('') : '<p>Нет активных дуэлей</p>';
                         break;
                     case 'challenge':
                         challengePopup.style.display = 'block';
@@ -214,16 +198,21 @@
                         historyList.innerHTML = data.history.length ? data.history
                             .map(game => `
                                 <div class="history-item">
-                                    <span class="history-players">${game.players[0]} vs ${game.players[1]}</span>
-                                    <span class="history-result">
+                                    <div class="history-header">
+                                        <span class="history-time">${new Date(game.date).toLocaleString()}</span>
+                                    </div>
+                                    <div class="history-players">
+                                        ${game.players[0]} vs ${game.players[1]}
+                                    </div>
+                                    <div class="history-result">
                                         ${game.abandoned 
-                                            ? `Игрок ${game.abandonedBy} вышел`
+                                            ? `<span class="abandoned">Игрок ${game.abandonedBy} покинул игру</span>`
                                             : game.winner 
-                                                ? `Победа: ${game.winner}` 
+                                                ? `Победитель: ${game.winner}` 
                                                 : 'Ничья'}
-                                    </span>
+                                    </div>
                                 </div>
-                            `).join('') : '<p class="no-data">Нет записей</p>';
+                            `).join('') : '<p>Нет записей</p>';
                         break;
                     case 'challengeSent':
                         showNotification(`Вызов на дуэль отправлен игроку ${data.challenged}. Ожидаем ответ...`);

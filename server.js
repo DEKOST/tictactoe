@@ -68,6 +68,15 @@ function handleLogin(ws, username) {
 }
 
 function handleChallenge(ws, { challenger, challenged }) {
+    // Добавляем проверку на вызов самого себя
+    if (challenger === challenged) {
+        ws.send(JSON.stringify({ 
+            type: 'challengeError', 
+            message: 'Вы не можете вызвать на дуэль самого себя' 
+        }));
+        return;
+    }
+
     const challengedPlayer = players.get(challenged);
     
     // Проверяем, не занят ли игрок
@@ -154,7 +163,6 @@ function handleAcceptChallenge(ws, { challenger }) {
     const gameId = uuidv4();
     const gameState = Array(9).fill(null);
 
-    // Первый игрок (challenger) играет за X
     games.set(gameId, {
         players: [challenger, ws.username],
         currentPlayer: 'X',
@@ -162,7 +170,8 @@ function handleAcceptChallenge(ws, { challenger }) {
         playerRoles: {
             [challenger]: 'X',
             [ws.username]: 'O'
-        }
+        },
+        startTime: new Date().toISOString()
     });
 
     // Отправляем сообщение первому игроку
@@ -313,10 +322,13 @@ function broadcastOnlinePlayers() {
         hasPendingChallenge: pendingChallenges.has(username)
     }));
     
+    const currentDuels = getCurrentDuels();
+    
     players.forEach(({ ws }) => {
         ws.send(JSON.stringify({ 
             type: 'onlinePlayers', 
-            players: playerList 
+            players: playerList,
+            currentDuels
         }));
     });
 }
@@ -364,6 +376,19 @@ function endGame(gameId, game) {
     
     games.delete(gameId);
     broadcastOnlinePlayers();
+}
+
+// Добавим функцию для получения текущих дуэлей
+function getCurrentDuels() {
+    const currentDuels = [];
+    for (const [gameId, game] of games.entries()) {
+        currentDuels.push({
+            gameId,
+            players: game.players,
+            startTime: game.startTime || new Date().toISOString()
+        });
+    }
+    return currentDuels;
 }
 
 console.log('Сервер WebSocket запущен на ws://localhost:8080');

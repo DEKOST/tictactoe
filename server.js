@@ -32,7 +32,7 @@ wss.on('connection', (ws) => {
                 break;
             case 'challenge':
                 const challenged = Object.keys(players).find(key => players[key] === data.challenged);
-                if (challenged) {
+                if (challenged && challenged.readyState === WebSocket.OPEN) {
                     challenged.send(JSON.stringify({
                         type: 'challenge',
                         challenger: data.challenger
@@ -41,7 +41,7 @@ wss.on('connection', (ws) => {
                 break;
             case 'acceptChallenge':
                 const challenger = Object.keys(players).find(key => players[key] === data.challenger);
-                if (challenger) {
+                if (challenger && challenger.readyState === WebSocket.OPEN) {
                     const gameId = gameIdCounter++;
                     games[gameId] = {
                         players: [challenger, ws],
@@ -68,22 +68,28 @@ wss.on('connection', (ws) => {
                     game.gameState[data.index] = data.player;
                     game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
                     game.players.forEach(player => {
-                        player.send(JSON.stringify({
-                            type: 'update',
-                            gameState: game.gameState,
-                            currentPlayer: game.currentPlayer
-                        }));
+                        if (player.readyState === WebSocket.OPEN) {
+                            player.send(JSON.stringify({
+                                type: 'update',
+                                gameState: game.gameState,
+                                currentPlayer: game.currentPlayer
+                            }));
+                        }
                     });
 
                     const winner = checkWinner(game.gameState);
                     if (winner) {
                         game.players.forEach(player => {
-                            player.send(JSON.stringify({ type: 'winner', winner }));
+                            if (player.readyState === WebSocket.OPEN) {
+                                player.send(JSON.stringify({ type: 'winner', winner }));
+                            }
                         });
                         resetGame(gameId);
                     } else if (game.gameState.every(cell => cell !== '')) {
                         game.players.forEach(player => {
-                            player.send(JSON.stringify({ type: 'draw' }));
+                            if (player.readyState === WebSocket.OPEN) {
+                                player.send(JSON.stringify({ type: 'draw' }));
+                            }
                         });
                         resetGame(gameId);
                     }
@@ -134,11 +140,13 @@ function resetGame(gameId) {
         game.gameState = ['', '', '', '', '', '', '', '', ''];
         game.currentPlayer = 'X';
         game.players.forEach(player => {
-            player.send(JSON.stringify({
-                type: 'reset',
-                gameState: game.gameState,
-                currentPlayer: game.currentPlayer
-            }));
+            if (player.readyState === WebSocket.OPEN) {
+                player.send(JSON.stringify({
+                    type: 'reset',
+                    gameState: game.gameState,
+                    currentPlayer: game.currentPlayer
+                }));
+            }
         });
     }
 }

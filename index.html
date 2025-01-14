@@ -141,18 +141,22 @@
                             }).join('');
 
                         // Добавляем обработчики кликов для вызова на дуэль
-                        const playerCards = playersList.querySelectorAll('.player-card:not(.current-player)');
-                        playerCards.forEach(card => {
-                            card.addEventListener('click', () => {
-                                const challengedPlayer = card.dataset.username;
-                                if (ws && ws.readyState === WebSocket.OPEN) {
-                                    ws.send(JSON.stringify({
-                                        type: 'challenge',
-                                        challenger: username,
-                                        challenged: challengedPlayer
-                                    }));
-                                }
-                            });
+                        const challengeBtns = playersList.querySelectorAll('.challenge-btn');
+                        challengeBtns.forEach(btn => {
+                            const playerCard = btn.closest('.player-card');
+                            if (playerCard) {
+                                btn.addEventListener('click', (e) => {
+                                    e.stopPropagation(); // Предотвращаем всплытие события
+                                    const challengedPlayer = playerCard.dataset.username;
+                                    if (ws && ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'challenge',
+                                            challenger: username,
+                                            challenged: challengedPlayer
+                                        }));
+                                    }
+                                });
+                            }
                         });
 
                         // Добавляем отображение текущих дуэлей

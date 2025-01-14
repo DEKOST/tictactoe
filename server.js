@@ -21,9 +21,9 @@ wss.on('connection', (ws) => {
                     ws.send(JSON.stringify({ type: 'login', success: true }));
 
                     // Отправляем новому клиенту текущий список игроков
-                    ws.send(JSON.stringify({ 
-                        type: 'onlinePlayers', 
-                        players: Object.values(players) 
+                    ws.send(JSON.stringify({
+                        type: 'onlinePlayers',
+                        players: Object.values(players)
                     }));
 
                     // Уведомляем всех о новом игроке
@@ -33,9 +33,9 @@ wss.on('connection', (ws) => {
             case 'challenge':
                 const challenged = Object.keys(players).find(key => players[key] === data.challenged);
                 if (challenged) {
-                    challenged.send(JSON.stringify({ 
-                        type: 'challenge', 
-                        challenger: data.challenger 
+                    challenged.send(JSON.stringify({
+                        type: 'challenge',
+                        challenger: data.challenger
                     }));
                 }
                 break;
@@ -48,17 +48,17 @@ wss.on('connection', (ws) => {
                         gameState: ['', '', '', '', '', '', '', '', ''],
                         currentPlayer: 'X'
                     };
-                    challenger.send(JSON.stringify({ 
-                        type: 'start', 
-                        gameId, 
-                        gameState: games[gameId].gameState, 
-                        currentPlayer: 'X' 
+                    challenger.send(JSON.stringify({
+                        type: 'start',
+                        gameId,
+                        gameState: games[gameId].gameState,
+                        currentPlayer: 'X'
                     }));
-                    ws.send(JSON.stringify({ 
-                        type: 'start', 
-                        gameId, 
-                        gameState: games[gameId].gameState, 
-                        currentPlayer: 'O' 
+                    ws.send(JSON.stringify({
+                        type: 'start',
+                        gameId,
+                        gameState: games[gameId].gameState,
+                        currentPlayer: 'O'
                     }));
                 }
                 break;
@@ -68,10 +68,10 @@ wss.on('connection', (ws) => {
                     game.gameState[data.index] = data.player;
                     game.currentPlayer = game.currentPlayer === 'X' ? 'O' : 'X';
                     game.players.forEach(player => {
-                        player.send(JSON.stringify({ 
-                            type: 'update', 
-                            gameState: game.gameState, 
-                            currentPlayer: game.currentPlayer 
+                        player.send(JSON.stringify({
+                            type: 'update',
+                            gameState: game.gameState,
+                            currentPlayer: game.currentPlayer
                         }));
                     });
 
@@ -104,9 +104,9 @@ function broadcastOnlinePlayers() {
     const onlinePlayers = Object.values(players); // Получаем список юзернеймов
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ 
-                type: 'onlinePlayers', 
-                players: onlinePlayers 
+            client.send(JSON.stringify({
+                type: 'onlinePlayers',
+                players: onlinePlayers
             }));
         }
     });
@@ -134,10 +134,10 @@ function resetGame(gameId) {
         game.gameState = ['', '', '', '', '', '', '', '', ''];
         game.currentPlayer = 'X';
         game.players.forEach(player => {
-            player.send(JSON.stringify({ 
-                type: 'reset', 
-                gameState: game.gameState, 
-                currentPlayer: game.currentPlayer 
+            player.send(JSON.stringify({
+                type: 'reset',
+                gameState: game.gameState,
+                currentPlayer: game.currentPlayer
             }));
         });
     }

@@ -94,9 +94,9 @@ function handleAcceptChallenge(ws, { challenger }) {
             currentPlayer: challenger,
             gameState,
         }));
-        console.log(`Сообщение о начале игры отправлено ${challenger}`);
+        console.log(`Сообщение о начале игры отправлено игроку ${challenger}`);
     } catch (err) {
-        console.error(`Ошибка отправки сообщения для игрока ${challenger}:`, err);
+        console.error(`Ошибка отправки сообщения игроку ${challenger}:`, err);
     }
 
     try {
@@ -106,11 +106,12 @@ function handleAcceptChallenge(ws, { challenger }) {
             currentPlayer: challenger,
             gameState,
         }));
-        console.log(`Сообщение о начале игры отправлено ${ws.username}`);
+        console.log(`Сообщение о начале игры отправлено игроку ${ws.username}`);
     } catch (err) {
-        console.error(`Ошибка отправки сообщения для игрока ${ws.username}:`, err);
+        console.error(`Ошибка отправки сообщения игроку ${ws.username}:`, err);
     }
 }
+
 
 function handleMove(ws, { gameId, index, player }) {
     const game = games.get(gameId);

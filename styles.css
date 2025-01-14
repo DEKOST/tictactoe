@@ -122,3 +122,13 @@ body {
 .popup button:hover {
     background: #ddd;
 }
+
+.clickable {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
+
+.clickable:hover {
+    color: darkblue;
+}

@@ -7,6 +7,8 @@ const players = new Map(); // Карта для хранения игроков
 const games = new Map(); // Карта для хранения активных игр
 const gameHistory = []; // История игр
 const playerStats = new Map(); // Статистика игроков
+const activeDuels = new Set(); // Игроки в активных дуэлях
+const pendingChallenges = new Map(); // Ожидающие подтверждения вызовы
 
 wss.on('connection', (ws) => {
     console.log('Новое соединение установлено');
@@ -67,14 +69,79 @@ function handleLogin(ws, username) {
 
 function handleChallenge(ws, { challenger, challenged }) {
     const challengedPlayer = players.get(challenged);
-    if (!challengedPlayer) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Игрок не в сети' }));
+    
+    // Проверяем, не занят ли игрок
+    if (activeDuels.has(challenged)) {
+        ws.send(JSON.stringify({ 
+            type: 'challengeError', 
+            message: 'Игрок сейчас участвует в дуэли' 
+        }));
         return;
     }
 
-    console.log(`Игрок ${challenger} вызывает ${challenged} на дуэль`);
+    if (pendingChallenges.has(challenged)) {
+        ws.send(JSON.stringify({ 
+            type: 'challengeError', 
+            message: 'Игрок уже получил вызов на дуэль' 
+        }));
+        return;
+    }
 
-    challengedPlayer.ws.send(JSON.stringify({ type: 'challenge', challenger }));
+    if (!challengedPlayer) {
+        ws.send(JSON.stringify({ 
+            type: 'challengeError', 
+            message: 'Игрок не в сети' 
+        }));
+        return;
+    }
+
+    // Сохраняем вызов
+    pendingChallenges.set(challenged, challenger);
+
+    // Отправляем подтверждение отправителю
+    ws.send(JSON.stringify({ 
+        type: 'challengeSent', 
+        challenged: challenged 
+    }));
+
+    // Отправляем вызов получателю
+    challengedPlayer.ws.send(JSON.stringify({ 
+        type: 'challenge', 
+        challenger 
+    }));
+}
+
+function handleChallengeResponse(ws, { challenger, accepted }) {
+    // Удаляем ожидающий вызов
+    pendingChallenges.delete(ws.username);
+    
+    const challengerPlayer = players.get(challenger);
+    if (!challengerPlayer) {
+        ws.send(JSON.stringify({ 
+            type: 'error', 
+            message: 'Игрок уже вышел' 
+        }));
+        return;
+    }
+
+    if (!accepted) {
+        // Отправляем сообщение об отказе
+        challengerPlayer.ws.send(JSON.stringify({ 
+            type: 'challengeDeclined', 
+            player: ws.username 
+        }));
+        return;
+    }
+
+    // Если принято - добавляем игроков в список активных дуэлей
+    activeDuels.add(challenger);
+    activeDuels.add(ws.username);
+
+    // Начинаем игру...
+    handleAcceptChallenge(ws, { challenger });
+    
+    // Обновляем список игроков для всех
+    broadcastOnlinePlayers();
 }
 
 function handleAcceptChallenge(ws, { challenger }) {
@@ -232,11 +299,16 @@ function handleDisconnect(ws) {
 function broadcastOnlinePlayers() {
     const playerList = Array.from(players.keys()).map(username => ({
         username,
-        stats: playerStats.get(username)
+        stats: playerStats.get(username),
+        isInGame: activeDuels.has(username),
+        hasPendingChallenge: pendingChallenges.has(username)
     }));
     
     players.forEach(({ ws }) => {
-        ws.send(JSON.stringify({ type: 'onlinePlayers', players: playerList }));
+        ws.send(JSON.stringify({ 
+            type: 'onlinePlayers', 
+            players: playerList 
+        }));
     });
 }
 
@@ -270,6 +342,17 @@ function broadcastGameHistory() {
             history: recentHistory 
         }));
     });
+}
+
+// Обновляем функцию окончания игры
+function endGame(gameId, game) {
+    // Удаляем игроков из активных дуэлей
+    game.players.forEach(player => {
+        activeDuels.delete(player);
+    });
+    
+    games.delete(gameId);
+    broadcastOnlinePlayers();
 }
 
 console.log('Сервер WebSocket запущен на ws://localhost:8080');

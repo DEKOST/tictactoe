@@ -236,6 +236,12 @@ function handleMove(ws, { gameId, index, player }) {
 
         // Отправляем обновленные данные
         setTimeout(() => {
+            // Очищаем статусы игроков
+            game.players.forEach(username => {
+                activeDuels.delete(username);
+                pendingChallenges.delete(username);
+            });
+
             // Отправляем результат игры
             game.players.forEach((username) => {
                 players.get(username).ws.send(JSON.stringify({ 
@@ -245,10 +251,7 @@ function handleMove(ws, { gameId, index, player }) {
                 }));
             });
             
-            // Обновляем список игроков с новой статистикой
             broadcastOnlinePlayers();
-            
-            // Отправляем обновленную историю всем
             broadcastGameHistory();
             
             games.delete(gameId);
@@ -273,6 +276,12 @@ function handleMove(ws, { gameId, index, player }) {
         gameHistory.push(gameResult);
 
         setTimeout(() => {
+            // Очищаем статусы игроков
+            game.players.forEach(username => {
+                activeDuels.delete(username);
+                pendingChallenges.delete(username);
+            });
+
             game.players.forEach((username) => {
                 players.get(username).ws.send(JSON.stringify({ 
                     type: 'draw',
@@ -346,10 +355,12 @@ function broadcastGameHistory() {
 
 // Обновляем функцию окончания игры
 function endGame(gameId, game) {
-    // Удаляем игроков из активных дуэлей
-    game.players.forEach(player => {
-        activeDuels.delete(player);
-    });
+    if (game && game.players) {
+        game.players.forEach(player => {
+            activeDuels.delete(player);
+            pendingChallenges.delete(player);
+        });
+    }
     
     games.delete(gameId);
     broadcastOnlinePlayers();
